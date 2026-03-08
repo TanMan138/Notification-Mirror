@@ -1,0 +1,30 @@
+# Built application files
+/build
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# Gradle
+.gradle
+/local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+/captures
+.externalNativeBuild
+.cxx
+
+# macOS
+.DS_Store
+
+# Cursor
+.cursor/
+
+# Local config (never commit real secrets)
+# Copy local.properties.example to local.properties and set notification_mirror_secret
+local.properties
+
+# Keystore (never commit – keep outside project or use CI secrets)
+*.jks

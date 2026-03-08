@@ -1,0 +1,6 @@
+# Copy this file to local.properties (or add the line below to your existing local.properties).
+# Do not commit local.properties — it is gitignored.
+#
+# Set the secret that the app sends with each /notify request. It must match
+# NOTIFICATION_MIRROR_SECRET (or NOTIFICATION_MIRROR_SECRET env var) on the Mac server.
+notification_mirror_secret=your_secret_here
