@@ -4,11 +4,7 @@ A native bridge that beams Android notifications to macOS and allows two-way dis
 
 ### Demo
 
-Add a short screen recording or screenshot here so recruiters can see it working. For example, create a `docs/` folder and add `demo.gif` or `screenshot.png`, then uncomment and use:
-
-```markdown
-![Notification mirror demo](docs/demo.gif)
-```
+![Notification mirror demo](docs/demo.png)
 
 ---
 
