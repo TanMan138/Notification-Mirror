@@ -4,7 +4,7 @@ A native bridge that beams Android notifications to macOS and allows two-way dis
 
 ### Demo
 
-![Notification mirror demo](docs/demo.png)
+![Notification mirror demo](docs/demo.gif)
 
 ---
 
