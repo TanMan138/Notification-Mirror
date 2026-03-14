@@ -1,0 +1,29 @@
+# Copy this file to local.properties (or add the lines below to your existing local.properties).
+# Do not commit local.properties — it is gitignored.
+#
+# 1. cp local.properties.example local.properties
+# 2. Edit local.properties and set the values below (use your own Supabase project URL and key).
+# 3. In Android Studio: File → Sync Project with Gradle Files (so BuildConfig gets the values).
+# 4. Rebuild and run on device. Check Logcat with filter "NotificationMirror" if nothing appears in DB.
+#
+# Notification Mirror: secret for /notify requests (must match Mac NOTIFICATION_MIRROR_SECRET).
+notification_mirror_secret=your_secret_here
+#
+# Supabase (required for mirror to work). Use the same project as the Mac app.
+# Get URL and publishable key from Supabase Dashboard → Project Settings → API.
+SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_PUBLISHABLE_KEY=your_publishable_key_here
+#
+# Supabase: create the table in SQL Editor if it doesn't exist:
+#   create table if not exists public.notifications (
+#     id bigint primary key generated always as identity,
+#     notification_key text not null,
+#     app_name text,
+#     title text not null,
+#     body_text text,
+#     base64_icon text,
+#     created_at timestamptz default now()
+#   );
+#   alter table public.notifications enable row level security;
+#   create policy "Allow anon insert" on public.notifications for insert to anon with check (true);
+#   create policy "Allow anon select" on public.notifications for select to anon using (true);

@@ -1,6 +1,6 @@
 # Android–Mac Notification Mirror
 
-A native bridge that beams Android notifications to macOS and allows two-way dismissal over local Wi‑Fi.
+A native bridge that beams Android notifications to macOS and allows two-way dismissal using real-time cloud synchronisation via Supabase.
 
 ### Demo
 
@@ -10,10 +10,10 @@ A native bridge that beams Android notifications to macOS and allows two-way dis
 
 ## Features
 
-- **Two-way background sync** — Dismiss a notification on your Mac and it clears on your Android device via a lightweight reverse HTTP call.
+- **Two-way background sync** — Dismiss a notification on your Mac and it pushes a state update to Supabase, which instantly clears it on your Android device over WebSockets.
 - **On-the-fly Base64 image encoding** — App icons are sent from the phone and shown in macOS notifications and in the menu bar app list.
 - **Dynamic app filtering** — Enable or disable notifications per app from the macOS menu bar; state is stored in UserDefaults and survives restarts.
-- **Zero cloud dependencies** — Everything runs on your local network (Mac HTTP server + Android HTTP server for dismiss); no accounts or internet required.
+- **Cloud-Powered WebSockets** — Powered by Supabase Realtime (PostgreSQL). It works anywhere in the world, unconstrained by local Wi-Fi limitations.
 
 ---
 
@@ -21,14 +21,16 @@ A native bridge that beams Android notifications to macOS and allows two-way dis
 
 | Layer | Stack |
 |-------|--------|
-| **Android** | Kotlin, `NotificationListenerService` to intercept notifications, [NanoHTTPD](https://github.com/NanoHttpd/nanohttpd) to run a small HTTP server for dismiss-from-Mac commands. |
-| **Mac** | SwiftUI menu bar app, [Swifter](https://github.com/httpswift/swifter) HTTP server to receive notifications, `UNUserNotificationCenter` for native macOS notifications. |
+| **Android** | Kotlin, `NotificationListenerService` to intercept notifications, and `Ktor` + `OkHttp` Supabase Realtime SDK. |
+| **Mac** | SwiftUI menu bar app, `UNUserNotificationCenter` for native notifications, and the Supabase Swift Realtime SDK. |
+| **Backend** | Supabase Postgres with Realtime channels enabled. |
 
 **Flow:**
 
-1. Android: `NotificationListenerService` receives a notification → app encodes title, body, app name, icon (Base64), and a shared secret → POST to `http://<mac-ip>:8080/notify`.
-2. Mac: Server validates the secret (from env), checks per-app filter, then shows a local notification with optional “Clear on Phone” action.
-3. User taps “Clear on Phone” → Mac POSTs to `http://<phone-ip>:8081/dismiss` with the notification key → Android dismisses it.
+1. **Android**: `NotificationListenerService` receives a notification → app encodes title, body, app name, icon (Base64) → executes an `INSERT` on the Supabase `notifications` table.
+2. **Mac**: The menu bar app subscribes to `postgresChange` events on the `notifications` table. It receives the `INSERT` payload, checks the per-app filter, and displays a native macOS notification with a “Clear on Phone” action.
+3. **Mac**: User taps “Clear on Phone” → Mac updates the row in the `notifications` table, setting `is_dismissed = true`.
+4. **Android**: A background listener subscribed to `UPDATE` events sees `is_dismissed = true` → extracts the `notification_key` and uses native Android APIs to cancel the notification on the phone.
 
 ---
 
@@ -36,17 +38,23 @@ A native bridge that beams Android notifications to macOS and allows two-way dis
 
 ```
 Android-Mac-Notification-Mirror/
-├── AndroidNotificationMirror/   # Xcode project (macOS menu bar app)
-└── NotificationMirror/           # Android Studio project (Kotlin + NotificationListenerService)
+├── macos/    # Xcode project (macOS menu bar app)
+└── android/  # Android Studio project (Kotlin + NotificationListenerService)
 ```
 
-- **Mac app setup:** See [AndroidNotificationMirror/README.md](AndroidNotificationMirror/README.md) (env var for shared secret, server URL, etc.).
-- **Android app setup:** See [NotificationMirror/README.md](NotificationMirror/README.md) (and `local.properties.example` for the shared secret).
+- **Mac app setup:** See [macos/README.md](macos/README.md) for how to inject Supabase credentials.
+- **Android app setup:** See [android/README.md](android/README.md) for configuring `local.properties` and the Supabase SQL schema.
 
 ---
 
 ## Security
 
-- The shared secret is **not** in source: Mac reads `NOTIFICATION_MIRROR_SECRET` from the environment; Android uses a value from `local.properties` (gitignored). Use the same value on both sides.
-- Keystores (`.jks`) are gitignored; keep them outside the repo or in a secure store.
-- All traffic is on your LAN; no data is sent to the cloud.
+- Keystores and private credentials (`.jks`, `local.properties`, `Secrets.xcconfig`) are strictly `.gitignore`d.
+- Always use Row Level Security (RLS) on your Supabase database.
+
+---
+
+## Acknowledgements
+
+- <a href="https://www.flaticon.com/free-icons/notification" title="notification icons">Notification icons created by Pixel perfect - Flaticon</a>
+
