@@ -66,15 +66,26 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         for await change in changeStream {
             do {
                 let notification = try change.record.decode(as: SupabaseNotification.self)
-                // We map this remote event directly to our local showNotification call
-                try await self.showNotification(
-                    title: notification.title,
-                    body: notification.body_text,
-                    notificationKey: notification.notification_key,
-                    phoneIp: "supabase", // Placeholder to keep signature backward-compatible
-                    appName: notification.app_name,
-                    appIconBase64: notification.base64_icon
-                )
+
+                // Check user preferences synchronously on the Main thread before showing
+                let shouldShow = await MainActor.run {
+                    MenuBarViewModel.shared.shouldShowNotification(
+                        forApp: notification.app_name,
+                        appIconBase64: notification.base64_icon
+                    )
+                }
+
+                if shouldShow {
+                    // We map this remote event directly to our local showNotification call
+                    try await self.showNotification(
+                        title: notification.title,
+                        body: notification.body_text,
+                        notificationKey: notification.notification_key,
+                        phoneIp: "supabase", // Placeholder to keep signature backward-compatible
+                        appName: notification.app_name,
+                        appIconBase64: notification.base64_icon
+                    )
+                }
             } catch {
                 #if DEBUG
                 print("[NotificationMirror] Failed to decode SupabaseNotification: \(error)")
