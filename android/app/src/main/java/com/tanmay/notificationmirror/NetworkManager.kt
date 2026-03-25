@@ -23,7 +23,7 @@ object NetworkManager {
      * @param appName Human-readable source app name, or null
      * @param title Notification title
      * @param bodyText Notification body text
-     * @param base64Icon Source app icon as PNG Base64 string, or null
+     * @param base64Icon Source app icon as lossy WebP Base64 string, or null
      */
     suspend fun sendNotification(
         notificationKey: String,

@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.util.Base64
 import android.util.Log
 import android.app.Notification
@@ -91,7 +92,7 @@ class NotificationMirrorService : NotificationListenerService() {
 
         val appIconBase64 = try {
             val icon = packageManager.getApplicationIcon(sbn.packageName)
-            drawableToBase64Png(icon)
+            drawableToBase64Webp(icon)
         } catch (_: Exception) {
             null
         }
@@ -115,15 +116,51 @@ class NotificationMirrorService : NotificationListenerService() {
 
     companion object {
         private const val FALLBACK_ICON_SIZE = 96
+        private const val ICON_MAX_EDGE_PX = 64
+        private const val WEBP_QUALITY = 70
 
         /**
-         * Converts a [Drawable] to a PNG-compressed Base64 string.
+         * Converts a [Drawable] to a lossy WebP Base64 string (max [ICON_MAX_EDGE_PX] on the long edge).
          */
-        fun drawableToBase64Png(drawable: Drawable): String? {
-            val bitmap = drawableToBitmap(drawable) ?: return null
+        fun drawableToBase64Webp(drawable: Drawable?): String? {
+            if (drawable == null) return null
+            val source = try {
+                drawableToBitmap(drawable)
+            } catch (_: Exception) {
+                null
+            } ?: return null
+
+            val toCompress = try {
+                scaleBitmapToMaxEdge(source, ICON_MAX_EDGE_PX)
+            } catch (_: Exception) {
+                null
+            } ?: return null
+
             val output = ByteArrayOutputStream()
-            if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) return null
+            val format = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                Bitmap.CompressFormat.WEBP_LOSSY
+            } else {
+                @Suppress("DEPRECATION")
+                Bitmap.CompressFormat.WEBP
+            }
+            if (!toCompress.compress(format, WEBP_QUALITY, output)) return null
             return Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)
+        }
+
+        private fun scaleBitmapToMaxEdge(bitmap: Bitmap, maxEdge: Int): Bitmap? {
+            if (bitmap.isRecycled) return null
+            val w = bitmap.width
+            val h = bitmap.height
+            if (w <= 0 || h <= 0) return null
+            if (w <= maxEdge && h <= maxEdge) return bitmap
+            val scale = minOf(maxEdge.toFloat() / w, maxEdge.toFloat() / h)
+            val newW = (w * scale).toInt().coerceAtLeast(1)
+            val newH = (h * scale).toInt().coerceAtLeast(1)
+            return try {
+                Bitmap.createScaledBitmap(bitmap, newW, newH, true)
+            } catch (_: Exception) {
+                null
+            }
         }
 
         private fun drawableToBitmap(drawable: Drawable): Bitmap? {

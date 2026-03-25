@@ -120,10 +120,10 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         if let appIconBase64, let imageData = Data(base64Encoded: appIconBase64) {
             let tempURL = FileManager.default.temporaryDirectory
                 .appendingPathComponent(UUID().uuidString, isDirectory: false)
-                .appendingPathExtension("png")
+                .appendingPathExtension("webp")
             try imageData.write(to: tempURL)
             let options: [AnyHashable: Any] = [
-                UNNotificationAttachmentOptionsTypeHintKey: "public.png"
+                UNNotificationAttachmentOptionsTypeHintKey: "public.webp"
             ]
             let attachment = try UNNotificationAttachment(
                 identifier: "appIcon",
