@@ -1,5 +1,31 @@
+import AppKit
 import UserNotifications
 import Supabase
+
+/// `UNNotificationAttachment` does not accept WebP on macOS (UNErrorDomain 101). Decode (WebP/PNG/etc.) via `NSImage` and attach as PNG.
+private func writeTempPNGForAttachment(from imageData: Data) throws -> URL {
+    guard let image = NSImage(data: imageData) else {
+        throw NSError(
+            domain: "NotificationMirror",
+            code: 2,
+            userInfo: [NSLocalizedDescriptionKey: "NSImage could not decode icon data"]
+        )
+    }
+    guard let tiff = image.tiffRepresentation,
+          let rep = NSBitmapImageRep(data: tiff),
+          let pngData = rep.representation(using: .png, properties: [:]) else {
+        throw NSError(
+            domain: "NotificationMirror",
+            code: 3,
+            userInfo: [NSLocalizedDescriptionKey: "Could not encode PNG for attachment"]
+        )
+    }
+    let url = FileManager.default.temporaryDirectory
+        .appendingPathComponent(UUID().uuidString, isDirectory: false)
+        .appendingPathExtension("png")
+    try pngData.write(to: url)
+    return url
+}
 
 private let DISMISS_ACTION = "DISMISS_ACTION"
 private let MIRROR_CATEGORY = "MIRROR_NOTIFICATION"
@@ -88,7 +114,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
                 }
             } catch {
                 #if DEBUG
-                print("[NotificationMirror] Failed to decode SupabaseNotification: \(error)")
+                print("[NotificationMirror] Realtime notification handling failed: \(error)")
                 #endif
             }
         }
@@ -118,19 +144,20 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         }
 
         if let appIconBase64, let imageData = Data(base64Encoded: appIconBase64) {
-            let tempURL = FileManager.default.temporaryDirectory
-                .appendingPathComponent(UUID().uuidString, isDirectory: false)
-                .appendingPathExtension("webp")
-            try imageData.write(to: tempURL)
-            let options: [AnyHashable: Any] = [
-                UNNotificationAttachmentOptionsTypeHintKey: "public.webp"
-            ]
-            let attachment = try UNNotificationAttachment(
-                identifier: "appIcon",
-                url: tempURL,
-                options: options
-            )
-            content.attachments = [attachment]
+            do {
+                let tempURL = try writeTempPNGForAttachment(from: imageData)
+                let options: [AnyHashable: Any] = [
+                    UNNotificationAttachmentOptionsTypeHintKey: "public.png"
+                ]
+                let attachment = try UNNotificationAttachment(
+                    identifier: "appIcon",
+                    url: tempURL,
+                    options: options
+                )
+                content.attachments = [attachment]
+            } catch {
+                // Still deliver the notification without an icon if PNG/attachment fails.
+            }
         }
 
         let request = UNNotificationRequest(
