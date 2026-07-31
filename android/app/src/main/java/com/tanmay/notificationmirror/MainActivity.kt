@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -46,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import com.tanmay.notificationmirror.ui.theme.NotificationMirrorTheme
 
@@ -242,6 +244,12 @@ private fun ensureTestNotificationChannel(context: Context) {
 }
 
 private fun postTestNotification(context: Context) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+        != PackageManager.PERMISSION_GRANTED
+    ) {
+        return
+    }
     ensureTestNotificationChannel(context)
     val notification = NotificationCompat.Builder(context, TEST_NOTIFICATION_CHANNEL_ID)
         .setContentTitle("Test notification")
