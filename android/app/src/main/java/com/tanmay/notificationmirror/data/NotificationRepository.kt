@@ -21,6 +21,9 @@ interface NotificationRepository {
 
     /** Emits the key of each notification the Mac has cleared. */
     fun observeDismissals(): Flow<String>
+
+    /** Probes the project during setup. Never throws. */
+    suspend fun checkConnection(): ConnectionCheck
 }
 
 class SupabaseNotificationRepository(
@@ -48,5 +51,27 @@ class SupabaseNotificationRepository(
                 client.realtime.removeChannel(channel)
             }
         }
+    }
+
+    override suspend fun checkConnection(): ConnectionCheck = try {
+        client.postgrest.from(TABLE).select { limit(1) }
+        ConnectionCheck.Ok
+    } catch (e: Exception) {
+        classifyConnectionFailure(e)
+    }
+}
+
+/** Maps a probe failure onto something a user can act on. */
+internal fun classifyConnectionFailure(e: Exception): ConnectionCheck {
+    val message = (e.message ?: "").lowercase()
+    return when {
+        "pgrst205" in message || "could not find the table" in message -> ConnectionCheck.TableMissing
+        "401" in message || "403" in message ||
+            "invalid api key" in message || "jwt" in message -> ConnectionCheck.InvalidCredentials
+        e is java.io.IOException ||
+            "unable to resolve host" in message ||
+            "failed to connect" in message ||
+            "timeout" in message -> ConnectionCheck.Unreachable
+        else -> ConnectionCheck.Unknown(e.message ?: e::class.java.simpleName)
     }
 }
