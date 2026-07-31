@@ -1,15 +1,10 @@
 package com.tanmay.notificationmirror
 
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
-import android.os.Build
-import android.util.Base64
 import android.util.Log
 import android.app.Notification
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import com.tanmay.notificationmirror.notifications.IconCodec
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -23,7 +18,6 @@ import io.github.jan.supabase.realtime.channel
 import io.github.jan.supabase.realtime.postgresChangeFlow
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonPrimitive
-import java.io.ByteArrayOutputStream
 
 class NotificationMirrorService : NotificationListenerService() {
 
@@ -91,8 +85,7 @@ class NotificationMirrorService : NotificationListenerService() {
         }
 
         val appIconBase64 = try {
-            val icon = packageManager.getApplicationIcon(sbn.packageName)
-            drawableToBase64Webp(icon)
+            IconCodec.encode(packageManager.getApplicationIcon(sbn.packageName))
         } catch (_: Exception) {
             null
         }
@@ -114,66 +107,4 @@ class NotificationMirrorService : NotificationListenerService() {
         }
     }
 
-    companion object {
-        private const val FALLBACK_ICON_SIZE = 96
-        private const val ICON_MAX_EDGE_PX = 64
-        private const val WEBP_QUALITY = 70
-
-        /**
-         * Converts a [Drawable] to a lossy WebP Base64 string (max [ICON_MAX_EDGE_PX] on the long edge).
-         */
-        fun drawableToBase64Webp(drawable: Drawable?): String? {
-            if (drawable == null) return null
-            val source = try {
-                drawableToBitmap(drawable)
-            } catch (_: Exception) {
-                null
-            } ?: return null
-
-            val toCompress = try {
-                scaleBitmapToMaxEdge(source, ICON_MAX_EDGE_PX)
-            } catch (_: Exception) {
-                null
-            } ?: return null
-
-            val output = ByteArrayOutputStream()
-            val format = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                Bitmap.CompressFormat.WEBP_LOSSY
-            } else {
-                @Suppress("DEPRECATION")
-                Bitmap.CompressFormat.WEBP
-            }
-            if (!toCompress.compress(format, WEBP_QUALITY, output)) return null
-            return Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)
-        }
-
-        private fun scaleBitmapToMaxEdge(bitmap: Bitmap, maxEdge: Int): Bitmap? {
-            if (bitmap.isRecycled) return null
-            val w = bitmap.width
-            val h = bitmap.height
-            if (w <= 0 || h <= 0) return null
-            if (w <= maxEdge && h <= maxEdge) return bitmap
-            val scale = minOf(maxEdge.toFloat() / w, maxEdge.toFloat() / h)
-            val newW = (w * scale).toInt().coerceAtLeast(1)
-            val newH = (h * scale).toInt().coerceAtLeast(1)
-            return try {
-                Bitmap.createScaledBitmap(bitmap, newW, newH, true)
-            } catch (_: Exception) {
-                null
-            }
-        }
-
-        private fun drawableToBitmap(drawable: Drawable): Bitmap? {
-            if (drawable is BitmapDrawable && drawable.bitmap != null) {
-                return drawable.bitmap
-            }
-            val w = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth.coerceAtMost(512) else FALLBACK_ICON_SIZE
-            val h = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight.coerceAtMost(512) else FALLBACK_ICON_SIZE
-            val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bitmap)
-            drawable.setBounds(0, 0, canvas.width, canvas.height)
-            drawable.draw(canvas)
-            return bitmap
-        }
-    }
 }
