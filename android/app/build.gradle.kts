@@ -1,26 +1,29 @@
 import java.util.Properties
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.0"
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
+// Supabase credentials live in local.properties, which is gitignored.
 val localProperties = Properties().apply {
     rootProject.file("local.properties").takeIf { it.exists() }?.reader(Charsets.UTF_8)?.use { load(it) }
 }
-val notificationMirrorSecret = localProperties.getProperty("notification_mirror_secret", "")
-val supabaseUrl = localProperties.getProperty("SUPABASE_URL", "")
-val supabasePublishableKey = localProperties.getProperty("SUPABASE_PUBLISHABLE_KEY", "")
+
+fun Properties.buildConfigString(key: String): String =
+    "\"${getProperty(key, "").replace("\\", "\\\\").replace("\"", "\\\"")}\""
 
 android {
     namespace = "com.tanmay.notificationmirror"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.tanmay.notificationmirror"
         minSdk = 28
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -29,9 +32,8 @@ android {
             useSupportLibrary = true
         }
 
-        buildConfigField("String", "NOTIFICATION_MIRROR_SECRET", "\"${notificationMirrorSecret.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
-        buildConfigField("String", "SUPABASE_URL", "\"${supabaseUrl.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
-        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${supabasePublishableKey.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
+        buildConfigField("String", "SUPABASE_URL", localProperties.buildConfigString("SUPABASE_URL"))
+        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", localProperties.buildConfigString("SUPABASE_PUBLISHABLE_KEY"))
     }
 
     buildTypes {
@@ -44,18 +46,12 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-    kotlinOptions {
-        jvmTarget = "1.8"
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures {
         compose = true
         buildConfig = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
     }
     packaging {
         resources {
@@ -64,8 +60,13 @@ android {
     }
 }
 
-dependencies {
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
+    }
+}
 
+dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -74,24 +75,20 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation(libs.androidx.material.icons.extended)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.serialization.json)
+
+    implementation(libs.supabase.postgrest)
+    implementation(libs.supabase.realtime)
+    implementation(libs.ktor.client.okhttp)
+
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
-    
-    // Supabase
-    implementation("io.github.jan-tennert.supabase:postgrest-kt:3.0.0")
-    implementation("io.github.jan-tennert.supabase:realtime-kt:3.0.0")
-    implementation("io.ktor:ktor-client-okhttp:3.0.0")
-    implementation("io.ktor:ktor-client-core:3.0.0")
-    implementation("io.ktor:ktor-client-content-negotiation:3.0.0")
-    
-    // Additional Supabase-required Ktor plugins
-    implementation("io.ktor:ktor-client-logging:3.0.0")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:3.0.0")
     debugImplementation(libs.androidx.ui.test.manifest)
 }
