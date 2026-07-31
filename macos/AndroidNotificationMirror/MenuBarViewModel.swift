@@ -18,7 +18,10 @@ final class MenuBarViewModel {
         case disconnected = "Disconnected"
     }
 
-    init() {
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         loadAppFilter()
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
@@ -37,11 +40,11 @@ final class MenuBarViewModel {
     }
 
     private func loadAppFilter() {
-        if let data = UserDefaults.standard.data(forKey: appFilterKey),
+        if let data = defaults.data(forKey: appFilterKey),
            let decoded = try? JSONDecoder().decode([String: Bool].self, from: data) {
             appFilter = decoded
         }
-        if let data = UserDefaults.standard.data(forKey: appIconsKey),
+        if let data = defaults.data(forKey: appIconsKey),
            let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
             appIcons = decoded
         }
@@ -49,17 +52,18 @@ final class MenuBarViewModel {
 
     private func saveAppFilter() {
         if let data = try? JSONEncoder().encode(appFilter) {
-            UserDefaults.standard.set(data, forKey: appFilterKey)
+            defaults.set(data, forKey: appFilterKey)
         }
         if let data = try? JSONEncoder().encode(appIcons) {
-            UserDefaults.standard.set(data, forKey: appIconsKey)
+            defaults.set(data, forKey: appIconsKey)
         }
     }
 
     /// Registers an app if new (default enabled), returns whether to show the notification.
     @MainActor
     func shouldShowNotification(forApp appName: String?, appIconBase64: String? = nil) -> Bool {
-        let name = appName?.trimmingCharacters(in: .whitespaces).isEmpty == false ? appName! : "Unknown"
+        let trimmed = appName?.trimmingCharacters(in: .whitespaces) ?? ""
+        let name = trimmed.isEmpty ? "Unknown" : trimmed
         if appFilter[name] == nil {
             appFilter[name] = true
             if let icon = appIconBase64 {
