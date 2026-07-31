@@ -11,13 +11,29 @@
 		11C0BCC22F5BD10000462E33 /* ServiceManagement.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11C0BCC32F5BD10000462E33 /* ServiceManagement.framework */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		114EB0E6301C56EA00524E0A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 11C0BCA92F5BD01D00462E33 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 11C0BCB02F5BD01D00462E33;
+			remoteInfo = AndroidNotificationMirror;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		114EB0E2301C56EA00524E0A /* AndroidNotificationMirrorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AndroidNotificationMirrorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		11C0BCB12F5BD01D00462E33 /* AndroidNotificationMirror.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AndroidNotificationMirror.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		11C0BCC32F5BD10000462E33 /* ServiceManagement.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ServiceManagement.framework; path = System/Library/Frameworks/ServiceManagement.framework; sourceTree = SDKROOT; };
 		11C0BCD02F5BD01D00462E33 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		114EB0E3301C56EA00524E0A /* AndroidNotificationMirrorTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AndroidNotificationMirrorTests;
+			sourceTree = "<group>";
+		};
 		11C0BCB32F5BD01D00462E33 /* AndroidNotificationMirror */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = AndroidNotificationMirror;
@@ -26,6 +42,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		114EB0DF301C56EA00524E0A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		11C0BCAE2F5BD01D00462E33 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -50,6 +73,7 @@
 			isa = PBXGroup;
 			children = (
 				11C0BCB32F5BD01D00462E33 /* AndroidNotificationMirror */,
+				114EB0E3301C56EA00524E0A /* AndroidNotificationMirrorTests */,
 				11C0BCB22F5BD01D00462E33 /* Products */,
 				11C0BCD02F5BD01D00462E33 /* Secrets.xcconfig */,
 				118A312D2F60E4CF00C50494 /* Recovered References */,
@@ -60,6 +84,7 @@
 			isa = PBXGroup;
 			children = (
 				11C0BCB12F5BD01D00462E33 /* AndroidNotificationMirror.app */,
+				114EB0E2301C56EA00524E0A /* AndroidNotificationMirrorTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -67,6 +92,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		114EB0E1301C56EA00524E0A /* AndroidNotificationMirrorTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 114EB0EA301C56EA00524E0A /* Build configuration list for PBXNativeTarget "AndroidNotificationMirrorTests" */;
+			buildPhases = (
+				114EB0DE301C56EA00524E0A /* Sources */,
+				114EB0DF301C56EA00524E0A /* Frameworks */,
+				114EB0E0301C56EA00524E0A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				114EB0E7301C56EA00524E0A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				114EB0E3301C56EA00524E0A /* AndroidNotificationMirrorTests */,
+			);
+			name = AndroidNotificationMirrorTests;
+			packageProductDependencies = (
+			);
+			productName = AndroidNotificationMirrorTests;
+			productReference = 114EB0E2301C56EA00524E0A /* AndroidNotificationMirrorTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		11C0BCB02F5BD01D00462E33 /* AndroidNotificationMirror */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 11C0BCBC2F5BD01D00462E33 /* Build configuration list for PBXNativeTarget "AndroidNotificationMirror" */;
@@ -97,9 +145,13 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2630;
+				LastSwiftUpdateCheck = 2660;
 				LastUpgradeCheck = 2630;
 				TargetAttributes = {
+					114EB0E1301C56EA00524E0A = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = 11C0BCB02F5BD01D00462E33;
+					};
 					11C0BCB02F5BD01D00462E33 = {
 						CreatedOnToolsVersion = 26.3;
 						LastSwiftMigration = 2630;
@@ -124,11 +176,19 @@
 			projectRoot = "";
 			targets = (
 				11C0BCB02F5BD01D00462E33 /* AndroidNotificationMirror */,
+				114EB0E1301C56EA00524E0A /* AndroidNotificationMirrorTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		114EB0E0301C56EA00524E0A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		11C0BCAF2F5BD01D00462E33 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -139,6 +199,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		114EB0DE301C56EA00524E0A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		11C0BCAD2F5BD01D00462E33 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -148,7 +215,55 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		114EB0E7301C56EA00524E0A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 11C0BCB02F5BD01D00462E33 /* AndroidNotificationMirror */;
+			targetProxy = 114EB0E6301C56EA00524E0A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		114EB0E8301C56EA00524E0A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tanman138.AndroidNotificationMirrorTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AndroidNotificationMirror.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AndroidNotificationMirror";
+			};
+			name = Debug;
+		};
+		114EB0E9301C56EA00524E0A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tanman138.AndroidNotificationMirrorTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AndroidNotificationMirror.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AndroidNotificationMirror";
+			};
+			name = Release;
+		};
 		11C0BCBA2F5BD01D00462E33 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 11C0BCD02F5BD01D00462E33 /* Secrets.xcconfig */;
@@ -345,6 +460,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		114EB0EA301C56EA00524E0A /* Build configuration list for PBXNativeTarget "AndroidNotificationMirrorTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				114EB0E8301C56EA00524E0A /* Debug */,
+				114EB0E9301C56EA00524E0A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		11C0BCAC2F5BD01D00462E33 /* Build configuration list for PBXProject "AndroidNotificationMirror" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
