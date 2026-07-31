@@ -8,11 +8,6 @@
 	<string>Notification Mirror</string>
 	<key>LSUIElement</key>
 	<true/>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
-	</dict>
 	<key>SUPABASE_HOST</key>
 	<string>$(SUPABASE_HOST)</string>
 	<key>SUPABASE_PUBLISHABLE_KEY</key>
