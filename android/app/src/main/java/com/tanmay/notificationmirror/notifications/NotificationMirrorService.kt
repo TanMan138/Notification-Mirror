@@ -6,6 +6,7 @@ import android.service.notification.StatusBarNotification
 import com.tanmay.notificationmirror.data.MirroredNotification
 import com.tanmay.notificationmirror.mirrorApp
 import com.tanmay.notificationmirror.util.MirrorLog
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,6 +26,8 @@ class NotificationMirrorService : NotificationListenerService() {
                     cancelNotification(key)
                     MirrorLog.d("Cleared $key from the cloud.")
                 }
+            } catch (e: CancellationException) {
+                throw e // Normal teardown when the service is unbound.
             } catch (e: Exception) {
                 MirrorLog.e("Dismiss listener stopped", e)
             }
