@@ -6,7 +6,7 @@ A macOS menu bar app that receives notifications from an Android device by liste
 
 ## Requirements
 
-- macOS
+- macOS 15.0 or later
 - A Supabase Project
 - The [android](../android/) app (in this repo)
 
