@@ -8,7 +8,7 @@ A macOS menu bar app that receives notifications from an Android device by liste
 
 - macOS
 - A Supabase Project
-- The [NotificationMirror](../NotificationMirror/) Android app (in this repo)
+- The [android](../android/) app (in this repo)
 
 ## Setup
 

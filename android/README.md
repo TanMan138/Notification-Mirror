@@ -14,7 +14,7 @@ Android app that listens to device notifications and syncs them directly to a Su
 
 ### 1. Open the Android project
 
-From the repository root, open the **NotificationMirror** folder in Android Studio (File → Open → select `NotificationMirror`). Sync Gradle.
+From the repository root, open the **android** folder in Android Studio (File → Open → select `android`). Sync Gradle.
 
 ### 2. Set the database keys
 

@@ -4,3 +4,13 @@
 # Editor / IDE
 .cursor/
 .idea/
+
+# Local agent tooling and working notes — never committed
+.claude/
+.clinerules/
+.opencode/
+.windsurf/
+.github/copilot-instructions.md
+AGENTS.md
+CLAUDE.md
+docs/superpowers/
