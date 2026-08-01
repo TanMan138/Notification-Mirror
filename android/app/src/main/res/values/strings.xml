@@ -17,6 +17,8 @@ create index if not exists notifications_created_idx
 alter table public.notifications replica identity full;
 alter table public.notifications enable row level security;
 
+grant select, insert, update, delete on public.notifications to anon;
+
 create policy "anon select" on public.notifications for select to anon using (true);
 create policy "anon insert" on public.notifications for insert to anon with check (true);
 create policy "anon update" on public.notifications for update to anon using (true);

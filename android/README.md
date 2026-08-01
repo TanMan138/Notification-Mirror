@@ -44,6 +44,11 @@ create index if not exists notifications_created_idx
 alter table public.notifications replica identity full;
 alter table public.notifications enable row level security;
 
+-- Policies filter rows that privileges already allow, so the grant is separate.
+-- Without it the app fails with a permission error if the project was created
+-- with "Automatically expose new tables" turned off.
+grant select, insert, update, delete on public.notifications to anon;
+
 create policy "anon select" on public.notifications for select to anon using (true);
 create policy "anon insert" on public.notifications for insert to anon with check (true);
 create policy "anon update" on public.notifications for update to anon using (true);
