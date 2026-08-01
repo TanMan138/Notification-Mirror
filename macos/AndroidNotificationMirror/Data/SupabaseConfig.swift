@@ -43,8 +43,11 @@ extension SupabaseConfig {
         return jwtRole(key) == "service_role"
     }
 
+    // Reads the top-level claim only. The Android parser must agree exactly, or a key
+    // rejected on one platform would be accepted on the other. Empty segments are kept
+    // so the segment count matches Kotlin's split.
     private static func jwtRole(_ token: String) -> String? {
-        let parts = token.split(separator: ".")
+        let parts = token.split(separator: ".", omittingEmptySubsequences: false)
         guard parts.count == 3 else { return nil }
 
         var base64 = String(parts[1])

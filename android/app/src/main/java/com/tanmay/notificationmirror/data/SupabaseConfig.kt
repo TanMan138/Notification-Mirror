@@ -1,5 +1,8 @@
 package com.tanmay.notificationmirror.data
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import java.util.Base64
 
 /** Credentials for the user's own Supabase project. */
@@ -42,12 +45,15 @@ internal fun isSecretKey(key: String): Boolean {
     return jwtRole(key) == "service_role"
 }
 
+// Reads the top-level claim only. The macOS parser must agree exactly, or a key
+// rejected on one platform would be accepted on the other.
 private fun jwtRole(token: String): String? {
     val parts = token.split(".")
     if (parts.size != 3) return null
     return try {
         val payload = String(Base64.getUrlDecoder().decode(parts[1]), Charsets.UTF_8)
-        Regex(""""role"\s*:\s*"([^"]+)"""").find(payload)?.groupValues?.get(1)
+        val claims = Json.parseToJsonElement(payload) as? JsonObject ?: return null
+        (claims["role"] as? JsonPrimitive)?.takeIf { it.isString }?.content
     } catch (_: Exception) {
         null
     }

@@ -91,4 +91,15 @@ class SupabaseConfigTest {
 
         assertTrue(parseSupabaseConfig("https://abcdefgh.supabase.co", anonJwt).isSuccess)
     }
+
+    @Test
+    fun `only the top level role claim counts`() {
+        // {"app_metadata":{"role":"service_role"},"role":"anon","ref":"abc"}
+        val nestedJwt =
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+                "eyJhcHBfbWV0YWRhdGEiOnsicm9sZSI6InNlcnZpY2Vfcm9sZSJ9LCJyb2xlIjoiYW5vbiIsInJlZiI6ImFiYyJ9." +
+                "c2lnbmF0dXJl"
+
+        assertTrue(parseSupabaseConfig("https://abcdefgh.supabase.co", nestedJwt).isSuccess)
+    }
 }

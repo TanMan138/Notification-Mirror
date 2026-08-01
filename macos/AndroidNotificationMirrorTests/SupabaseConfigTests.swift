@@ -60,4 +60,13 @@ import Testing
 
         #expect(error("https://abcdefgh.supabase.co", jwt) == nil)
     }
+
+    @Test func onlyTheTopLevelRoleClaimCounts() {
+        // {"app_metadata":{"role":"service_role"},"role":"anon","ref":"abc"}
+        let jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+            + "eyJhcHBfbWV0YWRhdGEiOnsicm9sZSI6InNlcnZpY2Vfcm9sZSJ9LCJyb2xlIjoiYW5vbiIsInJlZiI6ImFiYyJ9."
+            + "c2lnbmF0dXJl"
+
+        #expect(error("https://abcdefgh.supabase.co", jwt) == nil)
+    }
 }
