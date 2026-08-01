@@ -49,10 +49,10 @@ alter table public.notifications enable row level security;
 -- with "Automatically expose new tables" turned off.
 grant select, insert, update, delete on public.notifications to anon;
 
-create policy "anon select" on public.notifications for select to anon using (true);
-create policy "anon insert" on public.notifications for insert to anon with check (true);
-create policy "anon update" on public.notifications for update to anon using (true);
-create policy "anon delete" on public.notifications for delete to anon using (true);
+create policy anon_select on public.notifications for select to anon using (true);
+create policy anon_insert on public.notifications for insert to anon with check (true);
+create policy anon_update on public.notifications for update to anon using (true);
+create policy anon_delete on public.notifications for delete to anon using (true);
 ```
 
 ### 4. Connect the app

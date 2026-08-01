@@ -73,7 +73,13 @@ class SupabaseNotificationRepository(
     }
 }
 
-/** Maps a probe failure onto something a user can act on. */
+/**
+ * Maps a probe failure onto something a user can act on. The matched substrings
+ * were taken from real supabase-kt 3.1.4 failures:
+ *  - "Invalid API key (Double check your API key.)"
+ *  - "Could not find the table 'public.notifications' in the schema cache"
+ *  - "Unable to resolve host ...: No address associated with hostname"
+ */
 internal fun classifyConnectionFailure(e: Exception): ConnectionCheck {
     val message = (e.message ?: "").lowercase()
     return when {
@@ -84,6 +90,14 @@ internal fun classifyConnectionFailure(e: Exception): ConnectionCheck {
             "unable to resolve host" in message ||
             "failed to connect" in message ||
             "timeout" in message -> ConnectionCheck.Unreachable
-        else -> ConnectionCheck.Unknown(e.message ?: e::class.java.simpleName)
+        else -> ConnectionCheck.Unknown(safeDetail(e))
     }
 }
+
+/**
+ * Postgrest failures dump every request header, including the API key, into
+ * the message. Only the first line is safe to show or log.
+ */
+private fun safeDetail(e: Exception): String =
+    e.message?.lineSequence()?.firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }
+        ?: e::class.java.simpleName

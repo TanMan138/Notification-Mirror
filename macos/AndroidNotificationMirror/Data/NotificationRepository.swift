@@ -76,7 +76,9 @@ final class NotificationRepository {
         }
     }
 
-    /// Maps a probe failure onto something a user can act on.
+    /// Maps a probe failure onto something a user can act on. The matched
+    /// substrings were confirmed against real failures from the Android client,
+    /// which talks to the same PostgREST endpoint.
     static func classify(_ error: Error) -> ConnectionCheck {
         let message = error.localizedDescription.lowercased()
         if message.contains("pgrst205") || message.contains("could not find the table") {
@@ -89,7 +91,17 @@ final class NotificationRepository {
         if (error as NSError).domain == NSURLErrorDomain {
             return .unreachable
         }
-        return .unknown(error.localizedDescription)
+        return .unknown(Self.safeDetail(error))
+    }
+
+    /// A failure message can carry the request headers, and therefore the API
+    /// key. Only the first line is safe to show.
+    static func safeDetail(_ error: Error) -> String {
+        let first = error.localizedDescription
+            .split(separator: "\n", maxSplits: 1)
+            .first?
+            .trimmingCharacters(in: .whitespaces) ?? ""
+        return first.isEmpty ? "\(type(of: error))" : first
     }
 
     func markDismissed(notificationKey: String) async {
