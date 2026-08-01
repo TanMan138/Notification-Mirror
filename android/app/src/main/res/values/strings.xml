@@ -1,3 +1,24 @@
 <resources>
     <string name="app_name">Notification Mirror</string>
+    <string name="setup_sql" translatable="false">create table if not exists public.notifications (
+  id bigint primary key generated always as identity,
+  notification_key text not null,
+  app_name text,
+  title text not null,
+  body_text text,
+  base64_icon text,
+  is_dismissed boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists notifications_created_idx
+  on public.notifications (created_at desc);
+
+alter table public.notifications replica identity full;
+alter table public.notifications enable row level security;
+
+create policy "anon select" on public.notifications for select to anon using (true);
+create policy "anon insert" on public.notifications for insert to anon with check (true);
+create policy "anon update" on public.notifications for update to anon using (true);
+create policy "anon delete" on public.notifications for delete to anon using (true);</string>
 </resources>

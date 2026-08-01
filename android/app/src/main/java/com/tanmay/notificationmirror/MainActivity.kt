@@ -3,6 +3,8 @@ package com.tanmay.notificationmirror
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -49,7 +51,18 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
+import androidx.lifecycle.lifecycleScope
+import com.tanmay.notificationmirror.data.ConfigError
+import com.tanmay.notificationmirror.data.ConnectionCheck
+import com.tanmay.notificationmirror.data.SupabaseConfig
+import com.tanmay.notificationmirror.data.SupabaseNotificationRepository
+import com.tanmay.notificationmirror.data.SupabaseProvider
+import com.tanmay.notificationmirror.data.encodePairingPayload
+import com.tanmay.notificationmirror.data.parseSupabaseConfig
+import com.tanmay.notificationmirror.ui.PairingCard
+import com.tanmay.notificationmirror.ui.SetupScreen
 import com.tanmay.notificationmirror.ui.theme.NotificationMirrorTheme
+import kotlinx.coroutines.launch
 
 private const val TEST_NOTIFICATION_CHANNEL_ID = "notification_mirror_test"
 private const val TEST_NOTIFICATION_ID = 1
@@ -59,6 +72,13 @@ class MainActivity : ComponentActivity() {
 
     private var hasNotificationAccess by mutableStateOf(false)
     private var isIgnoringBatteryOptimizations by mutableStateOf(true)
+
+    private var config by mutableStateOf<SupabaseConfig?>(null)
+    private var urlField by mutableStateOf("")
+    private var keyField by mutableStateOf("")
+    private var setupStatus by mutableStateOf<String?>(null)
+    private var isChecking by mutableStateOf(false)
+    private var pairingString by mutableStateOf<String?>(null)
 
     private val requestNotificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -70,6 +90,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         hasNotificationAccess = checkNotificationAccess(this)
         isIgnoringBatteryOptimizations = checkBatteryOptimizationIgnored(this)
+        config = mirrorApp.configStore.current()
         setContent {
             NotificationMirrorTheme {
                 Scaffold(
@@ -80,18 +101,76 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 ) { innerPadding ->
-                    NotificationMirrorScreen(
-                        hasNotificationAccess = hasNotificationAccess,
-                        isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
-                        onFixPermissions = { handleFixPermissions() },
-                        onSendTestNotification = { trySendTestNotification() },
-                        modifier = Modifier
-                            .padding(innerPadding)
-                            .padding(16.dp)
-                    )
+                    val contentModifier = Modifier
+                        .padding(innerPadding)
+                        .padding(16.dp)
+
+                    if (config == null) {
+                        SetupScreen(
+                            url = urlField,
+                            key = keyField,
+                            sql = getString(R.string.setup_sql),
+                            status = setupStatus,
+                            isChecking = isChecking,
+                            onUrlChange = { urlField = it },
+                            onKeyChange = { keyField = it },
+                            onCopySql = { copyToClipboard("SQL", getString(R.string.setup_sql)) },
+                            onConnect = { connect() },
+                            modifier = contentModifier
+                        )
+                    } else {
+                        NotificationMirrorScreen(
+                            hasNotificationAccess = hasNotificationAccess,
+                            isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
+                            onFixPermissions = { handleFixPermissions() },
+                            onSendTestNotification = { trySendTestNotification() },
+                            pairing = {
+                                PairingCard(
+                                    pairingString = pairingString,
+                                    onGenerate = { generatePairingCode() },
+                                    onCopy = { pairingString?.let { copyToClipboard("Pairing code", it) } }
+                                )
+                            },
+                            modifier = contentModifier
+                        )
+                    }
                 }
             }
         }
+    }
+
+    /** Parses, probes the project, and only stores credentials that actually worked. */
+    private fun connect() {
+        val parsed = parseSupabaseConfig(urlField, keyField).getOrElse { error ->
+            setupStatus = configErrorMessage(error)
+            return
+        }
+
+        isChecking = true
+        setupStatus = null
+        lifecycleScope.launch {
+            val client = SupabaseProvider.create(parsed)
+            val result = try {
+                SupabaseNotificationRepository(client).checkConnection()
+            } finally {
+                client.close()
+            }
+            setupStatus = result.userMessage
+            if (result is ConnectionCheck.Ok) {
+                mirrorApp.configStore.save(parsed)
+                config = parsed
+            }
+            isChecking = false
+        }
+    }
+
+    private fun generatePairingCode() {
+        val current = config ?: return
+        pairingString = encodePairingPayload(current, System.currentTimeMillis() / 1000)
+    }
+
+    private fun copyToClipboard(label: String, text: String) {
+        getSystemService<ClipboardManager>()?.setPrimaryClip(ClipData.newPlainText(label, text))
     }
 
     override fun onResume() {
@@ -124,6 +203,17 @@ class MainActivity : ComponentActivity() {
 
 }
 
+private fun configErrorMessage(error: Throwable): String = when (error) {
+    ConfigError.UrlBlank -> "Enter your project URL."
+    ConfigError.UrlNotHttps -> "The URL must start with https://"
+    ConfigError.UrlNotSupabase -> "That does not look like a Supabase project URL."
+    ConfigError.KeyBlank -> "Enter your publishable key."
+    ConfigError.KeyIsSecret ->
+        "That is a secret key. Use the publishable key instead — a secret key would give " +
+            "anyone with this app full access to your database."
+    else -> "That configuration could not be read."
+}
+
 private fun checkNotificationAccess(context: Context): Boolean {
     val enabled = Settings.Secure.getString(
         context.contentResolver,
@@ -147,6 +237,7 @@ private fun NotificationMirrorScreen(
     isIgnoringBatteryOptimizations: Boolean,
     onFixPermissions: () -> Unit,
     onSendTestNotification: () -> Unit,
+    pairing: @Composable () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -230,6 +321,8 @@ private fun NotificationMirrorScreen(
                 }
             }
         }
+
+        pairing()
     }
 }
 
