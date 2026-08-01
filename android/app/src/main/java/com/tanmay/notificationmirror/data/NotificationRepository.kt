@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.withContext
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 private const val TABLE = "notifications"
 private const val CHANNEL = "public:notifications"
@@ -24,6 +26,9 @@ interface NotificationRepository {
 
     /** Probes the project during setup. Never throws. */
     suspend fun checkConnection(): ConnectionCheck
+
+    /** Deletes this project's rows older than [hours]. */
+    suspend fun purgeOlderThan(hours: Int)
 }
 
 class SupabaseNotificationRepository(
@@ -58,6 +63,13 @@ class SupabaseNotificationRepository(
         ConnectionCheck.Ok
     } catch (e: Exception) {
         classifyConnectionFailure(e)
+    }
+
+    override suspend fun purgeOlderThan(hours: Int) {
+        val cutoff = Instant.now().minus(hours.toLong(), ChronoUnit.HOURS)
+        client.postgrest.from(TABLE).delete {
+            filter { lt("created_at", cutoff.toString()) }
+        }
     }
 }
 
