@@ -66,6 +66,32 @@ final class NotificationRepository {
         }
     }
 
+    /// Probes the project during setup. Never throws.
+    func checkConnection() async -> ConnectionCheck {
+        do {
+            _ = try await client.from(notificationsTable).select().limit(1).execute()
+            return .ok
+        } catch {
+            return Self.classify(error)
+        }
+    }
+
+    /// Maps a probe failure onto something a user can act on.
+    static func classify(_ error: Error) -> ConnectionCheck {
+        let message = error.localizedDescription.lowercased()
+        if message.contains("pgrst205") || message.contains("could not find the table") {
+            return .tableMissing
+        }
+        if message.contains("401") || message.contains("403")
+            || message.contains("invalid api key") || message.contains("jwt") {
+            return .invalidCredentials
+        }
+        if (error as NSError).domain == NSURLErrorDomain {
+            return .unreachable
+        }
+        return .unknown(error.localizedDescription)
+    }
+
     func markDismissed(notificationKey: String) async {
         do {
             try await client

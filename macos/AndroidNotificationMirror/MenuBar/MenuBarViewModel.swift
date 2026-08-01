@@ -8,6 +8,7 @@ private let appIconsKey = "com.androidnotificationmirror.appIcons"
 final class MenuBarViewModel {
     static let shared = MenuBarViewModel()
 
+    var isConfigured: Bool = false
     var realtimeConnectionStatus: RealtimeConnectionStatus = .disconnected
     var appFilter: [String: Bool] = [:]
     var appIcons: [String: String] = [:]

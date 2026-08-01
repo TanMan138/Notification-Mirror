@@ -5,32 +5,57 @@ private let log = Logger(subsystem: "com.tanman138.AndroidNotificationMirror", c
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
+    private let configStore = ConfigStore()
     private var repository: NotificationRepository?
     private var presenter: NotificationPresenter?
+    private var pipeline: Task<Void, Never>?
+
+    /// Lets the setup window read and write the same store.
+    var sharedConfigStore: ConfigStore { configStore }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        guard let client = SupabaseProvider.makeClient() else {
-            log.error("Supabase is not configured. Fill in Secrets.xcconfig and rebuild.")
+        let presenter = NotificationPresenter { [weak self] key in
+            Task { await self?.repository?.markDismissed(notificationKey: key) }
+        }
+        self.presenter = presenter
+        SetupWindowController.shared.configStore = configStore
+
+        Task {
+            await presenter.requestAuthorization()
+            for await config in configStore.configChanges() {
+                await restart(with: config, presenter: presenter)
+            }
+        }
+    }
+
+    /// Cancelling the previous pipeline terminates its AsyncStreams, which
+    /// releases the old realtime channel before the new client subscribes.
+    private func restart(with config: SupabaseConfig?, presenter: NotificationPresenter) async {
+        pipeline?.cancel()
+        pipeline = nil
+        repository = nil
+
+        await MainActor.run { MenuBarViewModel.shared.isConfigured = config != nil }
+
+        guard let config, let client = SupabaseProvider.makeClient(config) else {
+            log.error("Supabase is not configured. Open Set Up… from the menu bar.")
+            await MainActor.run { MenuBarViewModel.shared.realtimeConnectionStatus = .disconnected }
             return
         }
 
         let repository = NotificationRepository(client: client)
-        let presenter = NotificationPresenter { key in
-            Task { await repository.markDismissed(notificationKey: key) }
-        }
         self.repository = repository
-        self.presenter = presenter
 
-        Task {
-            await presenter.requestAuthorization()
-            await consumeNotifications(from: repository, into: presenter)
-        }
-
-        Task {
-            for await status in repository.socketStatus() {
-                await MainActor.run {
-                    MenuBarViewModel.shared.realtimeConnectionStatus =
-                        status == .connected ? .connected : .disconnected
+        pipeline = Task {
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask { await self.consumeNotifications(from: repository, into: presenter) }
+                group.addTask {
+                    for await status in repository.socketStatus() {
+                        await MainActor.run {
+                            MenuBarViewModel.shared.realtimeConnectionStatus =
+                                status == .connected ? .connected : .disconnected
+                        }
+                    }
                 }
             }
         }

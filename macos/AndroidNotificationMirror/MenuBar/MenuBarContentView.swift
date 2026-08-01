@@ -5,6 +5,30 @@ struct MenuBarContentView: View {
     @Bindable var viewModel: MenuBarViewModel
 
     var body: some View {
+        if !viewModel.isConfigured {
+            Text("Not configured")
+            Button("Set Up…") { SetupWindowController.shared.show() }
+            Divider()
+        } else {
+            configuredMenu
+        }
+
+        // Launch at Login
+        Toggle("Launch at Login", isOn: Binding(
+            get: { viewModel.launchAtLogin },
+            set: { viewModel.toggleLaunchAtLogin($0) }
+        ))
+
+        Divider()
+
+        Button("Quit Notification Mirror") {
+            NSApplication.shared.terminate(nil)
+        }
+        .keyboardShortcut("q", modifiers: .command)
+    }
+
+    @ViewBuilder
+    private var configuredMenu: some View {
         // App Notifications submenu — enable/disable per app (checkmark = enabled)
         Menu("App Notifications") {
             if viewModel.appFilter.isEmpty {
@@ -43,18 +67,9 @@ struct MenuBarContentView: View {
         Text("Supabase Realtime: \(viewModel.realtimeConnectionStatus.rawValue)")
             .foregroundStyle(viewModel.realtimeConnectionStatus == .connected ? .primary : .secondary)
 
-        // Launch at Login
-        Toggle("Launch at Login", isOn: Binding(
-            get: { viewModel.launchAtLogin },
-            set: { viewModel.toggleLaunchAtLogin($0) }
-        ))
+        Button("Change Project…") { SetupWindowController.shared.show() }
 
         Divider()
-
-        Button("Quit Notification Mirror") {
-            NSApplication.shared.terminate(nil)
-        }
-        .keyboardShortcut("q", modifiers: .command)
     }
 }
 

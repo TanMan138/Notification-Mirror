@@ -3,16 +3,11 @@ import Supabase
 
 enum SupabaseProvider {
 
-    /// True when Secrets.xcconfig supplied both values at build time.
-    static var isConfigured: Bool {
-        !Config.supabaseURL.isEmpty && !Config.supabasePublishableKey.isEmpty
-    }
-
-    static func makeClient() -> SupabaseClient? {
-        guard isConfigured, let url = URL(string: Config.supabaseURL) else { return nil }
+    static func makeClient(_ config: SupabaseConfig) -> SupabaseClient? {
+        guard let url = URL(string: config.url) else { return nil }
         return SupabaseClient(
             supabaseURL: url,
-            supabaseKey: Config.supabasePublishableKey,
+            supabaseKey: config.publishableKey,
             options: SupabaseClientOptions(
                 auth: SupabaseClientOptions.AuthOptions(
                     emitLocalSessionAsInitialSession: true
