@@ -14,6 +14,7 @@ A native bridge that beams Android notifications to macOS and allows two-way dis
 - **On-the-fly Base64 image encoding** — App icons are sent from the phone and shown in macOS notifications and in the menu bar app list.
 - **Dynamic app filtering** — Enable or disable notifications per app from the macOS menu bar; state is stored in UserDefaults and survives restarts.
 - **Cloud-Powered WebSockets** — Powered by Supabase Realtime (PostgreSQL). It works anywhere in the world, unconstrained by local Wi-Fi limitations.
+- **Your own backend** — You create a free Supabase project and the two apps talk only through it. There is no shared server, no account to sign up for, and nothing for anyone else to see.
 
 ---
 
@@ -42,15 +43,25 @@ Android-Mac-Notification-Mirror/
 └── android/  # Android Studio project (Kotlin + NotificationListenerService)
 ```
 
-- **Mac app setup:** See [macos/README.md](macos/README.md) for how to inject Supabase credentials.
-- **Android app setup:** See [android/README.md](android/README.md) for configuring `local.properties` and the Supabase SQL schema.
+- **Android app setup:** See [android/README.md](android/README.md) — create the Supabase project, run the SQL, enter your keys. Start here.
+- **Mac app setup:** See [macos/README.md](macos/README.md) — paste the pairing code the phone generates.
+
+---
+
+## Your data
+
+- Notifications pass through **your own** Supabase project. Nothing is sent anywhere else, and neither app talks to any server the other user controls.
+- The phone deletes rows older than 24 hours, at most once a day.
+- Credentials live in the Android Keystore and the macOS Keychain, never in a plain preferences file.
+- A pairing code carries your project URL and publishable key and grants full access to that table. It expires after five minutes — do not share it.
 
 ---
 
 ## Security
 
+- Use the **publishable** key. The service role key bypasses row level security and would expose your whole database; both apps refuse it.
 - Keystores and private credentials (`.jks`, `local.properties`, `Secrets.xcconfig`) are strictly `.gitignore`d.
-- Always use Row Level Security (RLS) on your Supabase database.
+- Row Level Security is enabled by the setup SQL.
 
 ---
 
