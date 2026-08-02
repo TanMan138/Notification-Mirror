@@ -16,6 +16,23 @@ val localProperties = Properties().apply {
 fun Properties.buildConfigString(key: String): String =
     "\"${getProperty(key, "").replace("\\", "\\\\").replace("\"", "\\\"")}\""
 
+// Release signing comes from keystore.properties locally, or the matching
+// environment variables in CI. Unsigned release builds cannot be installed.
+val keystoreProperties = Properties().apply {
+    rootProject.file("keystore.properties").takeIf { it.exists() }?.reader(Charsets.UTF_8)?.use { load(it) }
+}
+
+fun signingValue(key: String, env: String): String? =
+    keystoreProperties.getProperty(key) ?: System.getenv(env)
+
+val releaseStoreFile = signingValue("storeFile", "RELEASE_STORE_FILE")
+val releaseStorePassword = signingValue("storePassword", "RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = signingValue("keyAlias", "RELEASE_KEY_ALIAS")
+val releaseKeyPassword = signingValue("keyPassword", "RELEASE_KEY_PASSWORD")
+val canSignRelease = listOf(
+    releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword
+).all { !it.isNullOrBlank() } && rootProject.file(releaseStoreFile!!).exists()
+
 android {
     namespace = "com.tanmay.notificationmirror"
     compileSdk = 36
@@ -24,8 +41,9 @@ android {
         applicationId = "com.tanmay.notificationmirror"
         minSdk = 28
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        // CI sets these from the release tag; local builds stay at the default.
+        versionCode = (System.getenv("VERSION_CODE") ?: "1").toInt()
+        versionName = System.getenv("VERSION_NAME") ?: "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -36,6 +54,17 @@ android {
         buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", localProperties.buildConfigString("SUPABASE_PUBLISHABLE_KEY"))
     }
 
+    signingConfigs {
+        if (canSignRelease) {
+            create("release") {
+                storeFile = rootProject.file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -43,6 +72,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.findByName("release")
+            // Never ship the developer's own project in a published build: it
+            // would hand every downloader access to their notifications.
+            buildConfigField("String", "SUPABASE_URL", "\"\"")
+            buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"\"")
         }
     }
     compileOptions {

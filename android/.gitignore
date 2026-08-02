@@ -29,3 +29,5 @@ local.properties
 
 # Keystore (never commit – keep outside project or use CI secrets)
 *.jks
+*.keystore
+keystore.properties
