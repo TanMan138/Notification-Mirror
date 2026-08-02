@@ -3,6 +3,9 @@ import OSLog
 
 private let log = Logger(subsystem: "com.tanman138.AndroidNotificationMirror", category: "AppDelegate")
 
+// AppKit delivers these callbacks on the main thread, and the stores it owns are
+// main-actor isolated. Stating it keeps older toolchains from inferring otherwise.
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private let configStore = ConfigStore()

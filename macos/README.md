@@ -12,9 +12,11 @@ A macOS menu bar app that receives notifications from an Android device by liste
 
 ## Setup
 
-1. **Install the app.** Download `AndroidNotificationMirror.zip` from the
-   [releases page](../../releases), unzip it, and drag the app to
-   `/Applications`. It lives in the menu bar only — there is no Dock icon.
+1. **Install the app.** Download `AndroidNotificationMirror.dmg` from the
+   [releases page](../../releases), open it, and drag the app onto the
+   Applications shortcut inside. Do not run it from the disk image or from
+   Downloads — an unsigned app launched outside Applications gets relocated by
+   macOS to a read-only path and behaves oddly. It lives in the menu bar only — there is no Dock icon.
 
    The app is **not notarized**, so macOS blocks it the first time. This is
    expected: notarization requires a paid Apple Developer account, and this

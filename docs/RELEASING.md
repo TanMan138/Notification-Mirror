@@ -1,7 +1,7 @@
 # Releasing
 
 Tagging `v*` builds both apps and opens a **draft** GitHub release with the APK
-and the zipped Mac app attached. Review the draft, then publish it.
+and the Mac disk image attached. Review the draft, then publish it.
 
 ```bash
 git tag v1.0.0
