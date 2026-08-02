@@ -6,6 +6,17 @@ private let log = Logger(subsystem: "com.tanman138.AndroidNotificationMirror", c
 
 private let notificationsTable = "notifications"
 private let notificationsChannel = "public:notifications"
+private let statusFunction = "mirror_setup_status"
+
+private struct SetupStatus: Decodable {
+    let inPublication: Bool
+    let replicaIdentityFull: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case inPublication = "in_publication"
+        case replicaIdentityFull = "replica_identity_full"
+    }
+}
 
 enum SocketStatus {
     case connected
@@ -70,9 +81,25 @@ final class NotificationRepository {
     func checkConnection() async -> ConnectionCheck {
         do {
             _ = try await client.from(notificationsTable).select().limit(1).execute()
-            return .ok
         } catch {
             return Self.classify(error)
+        }
+        // Reaching the table proves nothing about delivery: a table outside the
+        // realtime publication reads fine and streams nothing.
+        return await checkRealtimeReady()
+    }
+
+    private func checkRealtimeReady() async -> ConnectionCheck {
+        do {
+            let rows: [SetupStatus] = try await client.rpc(statusFunction).execute().value
+            guard let status = rows.first,
+                  status.inPublication, status.replicaIdentityFull else {
+                return .realtimeNotReady
+            }
+            return .ok
+        } catch {
+            // Missing function means the project was set up from older SQL.
+            return .realtimeNotReady
         }
     }
 

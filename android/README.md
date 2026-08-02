@@ -62,7 +62,34 @@ create policy anon_select on public.notifications for select to anon using (true
 create policy anon_insert on public.notifications for insert to anon with check (true);
 create policy anon_update on public.notifications for update to anon using (true);
 create policy anon_delete on public.notifications for delete to anon using (true);
+
+-- Lets the apps confirm the two settings above actually took effect, since
+-- neither is visible through the normal API.
+create or replace function public.mirror_setup_status()
+returns table (in_publication boolean, replica_identity_full boolean)
+language sql
+security definer
+set search_path = ''
+as $$
+  select
+    exists (
+      select 1 from pg_catalog.pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = 'notifications'
+    ),
+    coalesce((
+      select c.relreplident = 'f'
+      from pg_catalog.pg_class c
+      join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public' and c.relname = 'notifications'
+    ), false);
+$$;
+
+grant execute on function public.mirror_setup_status() to anon;
 ```
+
+The whole script is safe to re-run.
 
 ### 4. Connect the app
 

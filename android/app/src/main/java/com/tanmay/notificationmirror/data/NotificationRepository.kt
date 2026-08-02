@@ -12,11 +12,20 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 private const val TABLE = "notifications"
 private const val CHANNEL = "public:notifications"
+private const val STATUS_FUNCTION = "mirror_setup_status"
+
+@Serializable
+internal data class SetupStatus(
+    @SerialName("in_publication") val inPublication: Boolean,
+    @SerialName("replica_identity_full") val replicaIdentityFull: Boolean
+)
 
 interface NotificationRepository {
     suspend fun send(notification: MirroredNotification)
@@ -60,9 +69,23 @@ class SupabaseNotificationRepository(
 
     override suspend fun checkConnection(): ConnectionCheck = try {
         client.postgrest.from(TABLE).select { limit(1) }
-        ConnectionCheck.Ok
+        // Reaching the table proves nothing about delivery: a table outside the
+        // realtime publication reads fine and streams nothing.
+        checkRealtimeReady()
     } catch (e: Exception) {
         classifyConnectionFailure(e)
+    }
+
+    private suspend fun checkRealtimeReady(): ConnectionCheck = try {
+        val status = client.postgrest.rpc(STATUS_FUNCTION).decodeList<SetupStatus>().firstOrNull()
+        if (status?.inPublication == true && status.replicaIdentityFull) {
+            ConnectionCheck.Ok
+        } else {
+            ConnectionCheck.RealtimeNotReady
+        }
+    } catch (_: Exception) {
+        // Missing function means the project was set up from older SQL.
+        ConnectionCheck.RealtimeNotReady
     }
 
     override suspend fun purgeOlderThan(hours: Int) {

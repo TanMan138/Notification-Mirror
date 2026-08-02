@@ -5,6 +5,12 @@ sealed class ConnectionCheck {
     object Ok : ConnectionCheck()
     object InvalidCredentials : ConnectionCheck()
     object TableMissing : ConnectionCheck()
+
+    /**
+     * The table exists but is not streamed, so nothing would ever be delivered.
+     * Also covers a setup that predates the status function.
+     */
+    object RealtimeNotReady : ConnectionCheck()
     object Unreachable : ConnectionCheck()
     data class Unknown(val detail: String) : ConnectionCheck()
 
@@ -13,6 +19,9 @@ sealed class ConnectionCheck {
             Ok -> "Connected."
             InvalidCredentials -> "That key was rejected. Copy the publishable key from Project Settings, API."
             TableMissing -> "Connected, but the notifications table is missing. Run the SQL above first."
+            RealtimeNotReady ->
+                "Connected, but the table is not set up for realtime, so nothing would be " +
+                    "mirrored. Run the SQL above again — it is safe to re-run."
             Unreachable -> "Could not reach the project. Check the URL and your connection."
             is Unknown -> "Something went wrong: $detail"
         }
