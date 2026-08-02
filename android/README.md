@@ -87,9 +87,21 @@ as $$
 $$;
 
 grant execute on function public.mirror_setup_status() to anon;
+
+-- Deletes rows hourly. The phone also sweeps, but only while it is running,
+-- so without this a busy month can fill the free tier.
+create extension if not exists pg_cron;
+
+select cron.schedule(
+  'notification-mirror-retention',
+  '0 * * * *',
+  $$delete from public.notifications where created_at < now() - interval '24 hours'$$
+);
 ```
 
 The whole script is safe to re-run.
+
+If `create extension pg_cron` errors, enable **pg_cron** under Database → Extensions in the dashboard, then re-run.
 
 ### 4. Connect the app
 

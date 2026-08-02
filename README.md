@@ -51,7 +51,7 @@ Android-Mac-Notification-Mirror/
 ## Your data
 
 - Notifications pass through **your own** Supabase project. Nothing is sent anywhere else, and neither app talks to any server the other user controls.
-- The phone deletes rows older than 24 hours, at most once a day.
+- Rows older than 24 hours are deleted hourly by a scheduled job in your own project, with the phone sweeping as a fallback.
 - Credentials live in the Android Keystore and the macOS Keychain, never in a plain preferences file.
 - A pairing code carries your project URL and publishable key and grants full access to that table. It expires after five minutes — do not share it.
 
