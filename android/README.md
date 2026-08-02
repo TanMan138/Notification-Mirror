@@ -49,6 +49,15 @@ alter table public.notifications enable row level security;
 -- with "Automatically expose new tables" turned off.
 grant select, insert, update, delete on public.notifications to anon;
 
+-- Without this the table is not streamed at all: the connection test still
+-- passes, but no notification ever reaches the Mac and no dismissal ever
+-- reaches the phone.
+do $$
+begin
+  alter publication supabase_realtime add table public.notifications;
+exception when duplicate_object then null;
+end $$;
+
 create policy anon_select on public.notifications for select to anon using (true);
 create policy anon_insert on public.notifications for insert to anon with check (true);
 create policy anon_update on public.notifications for update to anon using (true);
