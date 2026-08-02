@@ -76,9 +76,12 @@ final class NotificationRepository {
         }
     }
 
-    /// Maps a probe failure onto something a user can act on. The matched
-    /// substrings were confirmed against real failures from the Android client,
-    /// which talks to the same PostgREST endpoint.
+    /// Maps a probe failure onto something a user can act on. Confirmed against
+    /// real supabase-swift failures:
+    ///  - PostgrestError "Invalid API key"
+    ///  - NSURLError "A server with the specified hostname could not be found."
+    /// The table case reuses the server's own wording, which the Android client
+    /// recorded as "Could not find the table '...' in the schema cache".
     static func classify(_ error: Error) -> ConnectionCheck {
         let message = error.localizedDescription.lowercased()
         if message.contains("pgrst205") || message.contains("could not find the table") {
