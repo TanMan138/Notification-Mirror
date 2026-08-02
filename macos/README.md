@@ -12,7 +12,27 @@ A macOS menu bar app that receives notifications from an Android device by liste
 
 ## Setup
 
-1. **Install the app** from the releases page and launch it. It lives in the menu bar only.
+1. **Install the app.** Download `AndroidNotificationMirror.zip` from the
+   [releases page](../../releases), unzip it, and drag the app to
+   `/Applications`. It lives in the menu bar only — there is no Dock icon.
+
+   The app is **not notarized**, so macOS blocks it the first time. This is
+   expected: notarization requires a paid Apple Developer account, and this
+   project is free to maintain. To open it:
+
+   - Double-click the app. macOS refuses and offers only **Done**.
+   - Open **System Settings → Privacy & Security**, scroll to the bottom, and
+     click **Open Anyway** next to the message about the app.
+   - Confirm with **Open Anyway** and authenticate.
+
+   Only the first launch needs this. If you prefer one command instead:
+
+   ```bash
+   xattr -dr com.apple.quarantine /Applications/AndroidNotificationMirror.app
+   ```
+
+   If you would rather not run unnotarized software, build from source with the
+   instructions below — the result is identical.
 
 2. **Open the menu bar icon** and click **Set Up…**. Until it is configured the menu shows **Not configured**.
 

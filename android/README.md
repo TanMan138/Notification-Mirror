@@ -14,7 +14,11 @@ Android app that listens to device notifications and syncs them to a Supabase pr
 
 ### 1. Install the APK
 
-Download the latest APK from the releases page and install it.
+Download `app-release.apk` from the [releases page](../../releases) and open it
+on the phone. Android will ask you to allow installing from your browser or file
+manager the first time.
+
+The APK ships with no credentials, so it opens straight to the setup screen.
 
 ### 2. Create a Supabase project
 

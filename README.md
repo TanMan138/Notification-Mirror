@@ -35,6 +35,19 @@ A native bridge that beams Android notifications to macOS and allows two-way dis
 
 ---
 
+## Install
+
+Grab both from the [releases page](../../releases):
+
+| | File | Notes |
+|---|---|---|
+| Android | `app-release.apk` | Set up the phone first — it creates the database and generates the pairing code |
+| macOS | `AndroidNotificationMirror.zip` | Not notarized; first launch needs **System Settings → Privacy & Security → Open Anyway** |
+
+Start with [android/README.md](android/README.md); the Mac just pairs with it.
+
+---
+
 ## Repository layout
 
 ```
