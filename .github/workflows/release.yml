@@ -26,9 +26,9 @@ jobs:
         working-directory: android
         run: ./gradlew testDebugUnitTest lint
 
-      # Signing material only exists for tag builds; see docs/RELEASING.md.
+      # Also runs on workflow_dispatch, so a dry run exercises the real signing
+      # path rather than silently producing an unsigned build.
       - name: Restore the keystore
-        if: startsWith(github.ref, 'refs/tags/v')
         working-directory: android
         env:
           KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
