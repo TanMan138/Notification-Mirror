@@ -24,8 +24,18 @@ private const val STATUS_FUNCTION = "mirror_setup_status"
 @Serializable
 internal data class SetupStatus(
     @SerialName("in_publication") val inPublication: Boolean,
-    @SerialName("replica_identity_full") val replicaIdentityFull: Boolean
+    @SerialName("replica_identity_full") val replicaIdentityFull: Boolean,
+    // A project still running the two-column function decodes with false, which
+    // reports SetupOutdated — the fix is the same re-run either way.
+    @SerialName("reply_columns") val replyColumns: Boolean = false
 )
+
+/** Turns a status row into a verdict. Null means the function is missing. */
+internal fun setupCheck(status: SetupStatus?): ConnectionCheck = when {
+    status == null || !status.inPublication || !status.replicaIdentityFull -> ConnectionCheck.RealtimeNotReady
+    !status.replyColumns -> ConnectionCheck.SetupOutdated
+    else -> ConnectionCheck.Ok
+}
 
 interface NotificationRepository {
     suspend fun send(notification: MirroredNotification)
@@ -77,12 +87,7 @@ class SupabaseNotificationRepository(
     }
 
     private suspend fun checkRealtimeReady(): ConnectionCheck = try {
-        val status = client.postgrest.rpc(STATUS_FUNCTION).decodeList<SetupStatus>().firstOrNull()
-        if (status?.inPublication == true && status.replicaIdentityFull) {
-            ConnectionCheck.Ok
-        } else {
-            ConnectionCheck.RealtimeNotReady
-        }
+        setupCheck(client.postgrest.rpc(STATUS_FUNCTION).decodeList<SetupStatus>().firstOrNull())
     } catch (_: Exception) {
         // Missing function means the project was set up from older SQL.
         ConnectionCheck.RealtimeNotReady

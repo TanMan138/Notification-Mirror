@@ -8,13 +8,30 @@ private let notificationsTable = "notifications"
 private let notificationsChannel = "public:notifications"
 private let statusFunction = "mirror_setup_status"
 
-private struct SetupStatus: Decodable {
+struct SetupStatus: Decodable {
     let inPublication: Bool
     let replicaIdentityFull: Bool
+    let replyColumns: Bool
 
     enum CodingKeys: String, CodingKey {
         case inPublication = "in_publication"
         case replicaIdentityFull = "replica_identity_full"
+        case replyColumns = "reply_columns"
+    }
+
+    init(inPublication: Bool, replicaIdentityFull: Bool, replyColumns: Bool) {
+        self.inPublication = inPublication
+        self.replicaIdentityFull = replicaIdentityFull
+        self.replyColumns = replyColumns
+    }
+
+    // A project still running the two-column function decodes with false, which
+    // reports setupOutdated — the fix is the same re-run either way.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        inPublication = try container.decode(Bool.self, forKey: .inPublication)
+        replicaIdentityFull = try container.decode(Bool.self, forKey: .replicaIdentityFull)
+        replyColumns = try container.decodeIfPresent(Bool.self, forKey: .replyColumns) ?? false
     }
 }
 
@@ -92,15 +109,19 @@ final class NotificationRepository {
     private func checkRealtimeReady() async -> ConnectionCheck {
         do {
             let rows: [SetupStatus] = try await client.rpc(statusFunction).execute().value
-            guard let status = rows.first,
-                  status.inPublication, status.replicaIdentityFull else {
-                return .realtimeNotReady
-            }
-            return .ok
+            return Self.setupCheck(rows.first)
         } catch {
             // Missing function means the project was set up from older SQL.
             return .realtimeNotReady
         }
+    }
+
+    /// Turns a status row into a verdict. Nil means the function is missing.
+    static func setupCheck(_ status: SetupStatus?) -> ConnectionCheck {
+        guard let status, status.inPublication, status.replicaIdentityFull else {
+            return .realtimeNotReady
+        }
+        return status.replyColumns ? .ok : .setupOutdated
     }
 
     /// Maps a probe failure onto something a user can act on. Confirmed against
