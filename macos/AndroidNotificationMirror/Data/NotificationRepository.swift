@@ -35,6 +35,12 @@ struct SetupStatus: Decodable {
     }
 }
 
+/// Anything the phone did that this Mac reacts to.
+enum MirrorEvent {
+    case incoming(MirroredNotification)
+    case replyResult(ReplyResult)
+}
+
 enum SocketStatus {
     case connected
     case disconnected
@@ -49,13 +55,20 @@ final class NotificationRepository {
         self.client = client
     }
 
-    /// Emits every notification the phone inserts.
-    func incomingNotifications() -> AsyncStream<MirroredNotification> {
+    /// Emits every notification the phone inserts, and every reply outcome it
+    /// writes back. One stream because a channel is cached by topic and every
+    /// subscription must be declared before it joins.
+    func mirrorEvents() -> AsyncStream<MirrorEvent> {
         AsyncStream { continuation in
             let task = Task {
                 let channel = self.client.channel(notificationsChannel)
                 let inserts = channel.postgresChange(
                     InsertAction.self,
+                    schema: "public",
+                    table: notificationsTable
+                )
+                let updates = channel.postgresChange(
+                    UpdateAction.self,
                     schema: "public",
                     table: notificationsTable
                 )
@@ -68,11 +81,28 @@ final class NotificationRepository {
                     return
                 }
 
-                for await insert in inserts {
-                    do {
-                        continuation.yield(try insert.record.decode(as: MirroredNotification.self))
-                    } catch {
-                        log.error("Could not decode an inserted row: \(error.localizedDescription)")
+                await withTaskGroup(of: Void.self) { group in
+                    group.addTask {
+                        for await insert in inserts {
+                            do {
+                                let row = try insert.record.decode(as: MirroredNotification.self)
+                                continuation.yield(.incoming(row))
+                            } catch {
+                                log.error("Could not decode an inserted row: \(error.localizedDescription)")
+                            }
+                        }
+                    }
+                    group.addTask {
+                        for await update in updates {
+                            do {
+                                let row = try update.record.decode(as: ReplyRow.self)
+                                if let result = ReplyResult.from(row) {
+                                    continuation.yield(.replyResult(result))
+                                }
+                            } catch {
+                                log.error("Could not decode an updated row: \(error.localizedDescription)")
+                            }
+                        }
                     }
                 }
                 continuation.finish()
@@ -165,6 +195,21 @@ final class NotificationRepository {
             log.debug("Marked \(notificationKey, privacy: .public) dismissed.")
         } catch {
             log.error("Could not mark dismissed: \(error.localizedDescription)")
+        }
+    }
+
+    /// Hands a reply to the phone. The phone writes reply_status back as sent
+    /// or failed, which arrives as a replyResult event.
+    func sendReply(notificationKey: String, text: String) async {
+        do {
+            try await client
+                .from(notificationsTable)
+                .update(["reply_text": text, "reply_status": "pending"])
+                .eq("notification_key", value: notificationKey)
+                .execute()
+            log.debug("Sent a reply for \(notificationKey, privacy: .public).")
+        } catch {
+            log.error("Could not send the reply: \(error.localizedDescription)")
         }
     }
 }

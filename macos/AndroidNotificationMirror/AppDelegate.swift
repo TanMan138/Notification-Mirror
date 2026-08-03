@@ -19,6 +19,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         let presenter = NotificationPresenter { [weak self] key in
             Task { await self?.repository?.markDismissed(notificationKey: key) }
+        } onReplyRequested: { [weak self] key, text in
+            Task { await self?.repository?.sendReply(notificationKey: key, text: text) }
         }
         self.presenter = presenter
         SetupWindowController.shared.configStore = configStore
@@ -51,7 +53,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         pipeline = Task {
             await withTaskGroup(of: Void.self) { group in
-                group.addTask { await self.consumeNotifications(from: repository, into: presenter) }
+                group.addTask { await self.consumeEvents(from: repository, into: presenter) }
                 group.addTask {
                     for await status in repository.socketStatus() {
                         await MainActor.run {
@@ -64,19 +66,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func consumeNotifications(
+    private func consumeEvents(
         from repository: NotificationRepository,
         into presenter: NotificationPresenter
     ) async {
-        for await notification in repository.incomingNotifications() {
-            let shouldShow = await MainActor.run {
-                MenuBarViewModel.shared.shouldShowNotification(
-                    forApp: notification.appName,
-                    appIconBase64: notification.base64Icon
-                )
-            }
-            if shouldShow {
-                await presenter.present(notification)
+        for await event in repository.mirrorEvents() {
+            switch event {
+            case .incoming(let notification):
+                let shouldShow = await MainActor.run {
+                    MenuBarViewModel.shared.shouldShowNotification(
+                        forApp: notification.appName,
+                        appIconBase64: notification.base64Icon
+                    )
+                }
+                if shouldShow {
+                    await presenter.present(notification)
+                }
+            case .replyResult(let result):
+                // A delivered reply needs no announcement; a lost one does.
+                if !result.delivered {
+                    await presenter.presentReplyFailure(result)
+                }
             }
         }
     }
