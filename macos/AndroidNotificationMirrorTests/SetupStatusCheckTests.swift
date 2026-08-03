@@ -1,35 +1,36 @@
-import XCTest
+import Foundation
+import Testing
 @testable import AndroidNotificationMirror
 
-final class SetupStatusCheckTests: XCTestCase {
+@Suite struct SetupStatusCheckTests {
 
-    func testAcceptsAFullyConfiguredProject() {
+    @Test func acceptsAFullyConfiguredProject() {
         let status = SetupStatus(inPublication: true, replicaIdentityFull: true, replyColumns: true)
 
-        XCTAssertEqual(NotificationRepository.setupCheck(status), .ok)
+        #expect(NotificationRepository.setupCheck(status) == .ok)
     }
 
-    func testReportsAnOutdatedSchemaWhenOnlyReplyColumnsAreMissing() {
+    @Test func reportsAnOutdatedSchemaWhenOnlyReplyColumnsAreMissing() {
         let status = SetupStatus(inPublication: true, replicaIdentityFull: true, replyColumns: false)
 
-        XCTAssertEqual(NotificationRepository.setupCheck(status), .setupOutdated)
+        #expect(NotificationRepository.setupCheck(status) == .setupOutdated)
     }
 
-    func testPrefersTheRealtimeFailureWhenBothAreWrong() {
+    @Test func prefersTheRealtimeFailureWhenBothAreWrong() {
         let status = SetupStatus(inPublication: false, replicaIdentityFull: true, replyColumns: false)
 
-        XCTAssertEqual(NotificationRepository.setupCheck(status), .realtimeNotReady)
+        #expect(NotificationRepository.setupCheck(status) == .realtimeNotReady)
     }
 
-    func testTreatsAMissingStatusRowAsAnOlderSetup() {
-        XCTAssertEqual(NotificationRepository.setupCheck(nil), .realtimeNotReady)
+    @Test func treatsAMissingStatusRowAsAnOlderSetup() {
+        #expect(NotificationRepository.setupCheck(nil) == .realtimeNotReady)
     }
 
-    func testDecodesAStatusRowMissingTheReplyColumnsField() throws {
-        let json = Data(#"{"in_publication":true,"replica_identity_full":true}"#.utf8)
+    @Test func decodesAStatusRowMissingTheReplyColumnsField() throws {
+        let json = Data(#"{"in_publication": true, "replica_identity_full": true}"#.utf8)
 
         let status = try JSONDecoder().decode(SetupStatus.self, from: json)
 
-        XCTAssertFalse(status.replyColumns)
+        #expect(status.replyColumns == false)
     }
 }

@@ -45,6 +45,25 @@ import Testing
         #expect(notification.bodyText == nil)
     }
 
+    @Test func decodesTheRepliableFlag() throws {
+        let notification = try decode("""
+        {"notification_key": "k", "app_name": "Signal", "title": "Ada",
+         "body_text": "dinner?", "base64_icon": null, "is_repliable": true}
+        """)
+
+        #expect(notification.isRepliable)
+    }
+
+    @Test func treatsAMissingRepliableFlagAsNotRepliable() throws {
+        // A phone still on the previous release omits the column entirely.
+        let notification = try decode("""
+        {"notification_key": "k", "app_name": "Signal", "title": "Ada",
+         "body_text": null, "base64_icon": null}
+        """)
+
+        #expect(!notification.isRepliable)
+    }
+
     @Test func decodesARowWithExtraColumns() throws {
         let notification = try decode("""
         {"id": 42, "notification_key": "k", "app_name": "Example",
