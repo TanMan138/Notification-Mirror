@@ -1,6 +1,6 @@
 # Notification Mirror (Android)
 
-Android app that listens to device notifications and syncs them to a Supabase project via Realtime WebSockets. Works with the Mac menu bar app in this repository — see [macos](../macos/).
+Android app that listens to device notifications and syncs them to a Supabase project via Realtime WebSockets. Notifications from messaging apps can be replied to from the Mac, and clearing one on either device clears it on the other. Works with the Mac menu bar app in this repository — see [macos](../macos/).
 
 **In this repo:** Part of [Android–Mac Notification Mirror](../README.md). For architecture, start from the root README.
 
@@ -126,6 +126,10 @@ select cron.schedule(
 ```
 
 The whole script is safe to re-run.
+
+**Upgrading from v1.0.0?** Run the script again. Replying from the Mac needs three
+columns that projects set up before it do not have, and **Test connection** says so
+if they are missing. Everything else keeps working in the meantime.
 
 If `create extension pg_cron` errors, enable **pg_cron** under Database → Extensions in the dashboard, then re-run.
 
