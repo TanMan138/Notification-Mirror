@@ -43,6 +43,13 @@ create table if not exists public.notifications (
 create index if not exists notifications_created_idx
   on public.notifications (created_at desc);
 
+-- Separate statements, not part of create table, so that a project created
+-- before replies existed picks them up on a re-run.
+alter table public.notifications add column if not exists is_repliable boolean not null default false;
+alter table public.notifications add column if not exists reply_text text;
+-- null | pending | sent | failed. The Mac writes pending; the phone writes the outcome.
+alter table public.notifications add column if not exists reply_status text;
+
 -- Required, or the UPDATE payload omits notification_key and phone-side
 -- dismissal silently stops working.
 alter table public.notifications replica identity full;
@@ -62,15 +69,23 @@ begin
 exception when duplicate_object then null;
 end $$;
 
+-- create policy has no "if not exists", and this script is meant to be re-run.
+drop policy if exists anon_select on public.notifications;
+drop policy if exists anon_insert on public.notifications;
+drop policy if exists anon_update on public.notifications;
+drop policy if exists anon_delete on public.notifications;
+
 create policy anon_select on public.notifications for select to anon using (true);
 create policy anon_insert on public.notifications for insert to anon with check (true);
 create policy anon_update on public.notifications for update to anon using (true);
 create policy anon_delete on public.notifications for delete to anon using (true);
 
--- Lets the apps confirm the two settings above actually took effect, since
--- neither is visible through the normal API.
+-- Lets the apps confirm the settings above actually took effect, since none of
+-- them is visible through the normal API.
+-- The return type gained a column, and create or replace cannot widen it.
+drop function if exists public.mirror_setup_status();
 create or replace function public.mirror_setup_status()
-returns table (in_publication boolean, replica_identity_full boolean)
+returns table (in_publication boolean, replica_identity_full boolean, reply_columns boolean)
 language sql
 security definer
 set search_path = ''
@@ -87,7 +102,14 @@ as $$
       from pg_catalog.pg_class c
       join pg_catalog.pg_namespace n on n.oid = c.relnamespace
       where n.nspname = 'public' and c.relname = 'notifications'
-    ), false);
+    ), false),
+    exists (
+      select 1 from pg_catalog.pg_attribute a
+      join pg_catalog.pg_class c on c.oid = a.attrelid
+      join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public' and c.relname = 'notifications'
+        and a.attname = 'reply_status' and not a.attisdropped
+    );
 $$;
 
 grant execute on function public.mirror_setup_status() to anon;
