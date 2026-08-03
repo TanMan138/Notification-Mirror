@@ -10,5 +10,6 @@ data class MirroredNotification(
     @SerialName("app_name") val appName: String?,
     @SerialName("title") val title: String,
     @SerialName("body_text") val bodyText: String?,
-    @SerialName("base64_icon") val base64Icon: String?
+    @SerialName("base64_icon") val base64Icon: String?,
+    @SerialName("is_repliable") val isRepliable: Boolean = false
 )

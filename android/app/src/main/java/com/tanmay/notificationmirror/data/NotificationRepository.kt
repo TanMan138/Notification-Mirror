@@ -40,8 +40,11 @@ internal fun setupCheck(status: SetupStatus?): ConnectionCheck = when {
 interface NotificationRepository {
     suspend fun send(notification: MirroredNotification)
 
-    /** Emits the key of each notification the Mac has cleared. */
-    fun observeDismissals(): Flow<String>
+    /** Emits each thing the Mac asked this phone to do. */
+    fun observeMacActions(): Flow<MacAction>
+
+    /** Records whether a reply reached the app that posted the notification. */
+    suspend fun markReplyResult(notificationKey: String, delivered: Boolean)
 
     /** Probes the project during setup. Never throws. */
     suspend fun checkConnection(): ConnectionCheck
@@ -58,7 +61,7 @@ class SupabaseNotificationRepository(
         client.postgrest.from(TABLE).insert(notification)
     }
 
-    override fun observeDismissals(): Flow<String> = flow {
+    override fun observeMacActions(): Flow<MacAction> = flow {
         // client.channel() caches by topic, and postgresChangeFlow must be called
         // before joining, so the channel has to be released when collection ends.
         // Android rebinds the listener service, and a stale joined channel would
@@ -69,11 +72,19 @@ class SupabaseNotificationRepository(
                 table = TABLE
             }
             channel.subscribe(blockUntilSubscribed = true)
-            emitAll(updates.mapNotNull { dismissedKeyOrNull(it.record) })
+            emitAll(updates.mapNotNull { macActionOrNull(it.record) })
         } finally {
             withContext(NonCancellable) {
                 client.realtime.removeChannel(channel)
             }
+        }
+    }
+
+    override suspend fun markReplyResult(notificationKey: String, delivered: Boolean) {
+        client.postgrest.from(TABLE).update({
+            set("reply_status", if (delivered) "sent" else "failed")
+        }) {
+            filter { eq("notification_key", notificationKey) }
         }
     }
 
