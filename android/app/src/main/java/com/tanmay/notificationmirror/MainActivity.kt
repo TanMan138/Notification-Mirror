@@ -80,6 +80,7 @@ class MainActivity : ComponentActivity() {
     private var setupStatus by mutableStateOf<String?>(null)
     private var isChecking by mutableStateOf(false)
     private var pairingString by mutableStateOf<String?>(null)
+    private var isSetupOutdated by mutableStateOf(false)
 
     private val requestNotificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -126,6 +127,8 @@ class MainActivity : ComponentActivity() {
                             onFixPermissions = { handleFixPermissions() },
                             onSendTestNotification = { trySendTestNotification() },
                             onSendRepliableTestNotification = { trySendRepliableTestNotification() },
+                            isSetupOutdated = isSetupOutdated,
+                            onCopySql = { copyToClipboard("SQL", getString(R.string.setup_sql)) },
                             pairing = {
                                 PairingCard(
                                     pairingString = pairingString,
@@ -179,6 +182,21 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         hasNotificationAccess = checkNotificationAccess(this)
         isIgnoringBatteryOptimizations = checkBatteryOptimizationIgnored(this)
+        checkSchemaIsCurrent()
+    }
+
+    /**
+     * A project set up before replies existed keeps mirroring happily and
+     * silently drops every reply. The setup screen reports it, but a configured
+     * user never sees that screen, so the main screen has to say so too.
+     */
+    private fun checkSchemaIsCurrent() {
+        val repository = mirrorApp.repositoryFlow.value ?: return
+        lifecycleScope.launch {
+            // Only this one verdict is actionable here. A network failure means
+            // we simply do not know, and nagging about it would be noise.
+            isSetupOutdated = repository.checkConnection() is ConnectionCheck.SetupOutdated
+        }
     }
 
     private fun handleFixPermissions() {
@@ -252,6 +270,8 @@ private fun NotificationMirrorScreen(
     onFixPermissions: () -> Unit,
     onSendTestNotification: () -> Unit,
     onSendRepliableTestNotification: () -> Unit,
+    isSetupOutdated: Boolean,
+    onCopySql: () -> Unit,
     pairing: @Composable () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -261,6 +281,47 @@ private fun NotificationMirrorScreen(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        if (isSetupOutdated) {
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Text(
+                            text = "Replies are not set up",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Your Supabase project was created before replies were supported. " +
+                            "Notifications still mirror, but replying from the Mac does nothing. " +
+                            "Run the setup SQL again to fix it — it is safe to re-run.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = onCopySql,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Copy SQL")
+                    }
+                }
+            }
+        }
+
         ElevatedCard(
             modifier = Modifier.fillMaxWidth()
         ) {
