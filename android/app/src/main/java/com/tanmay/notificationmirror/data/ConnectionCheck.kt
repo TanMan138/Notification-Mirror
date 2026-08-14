@@ -11,6 +11,9 @@ sealed class ConnectionCheck {
      * Also covers a setup that predates the status function.
      */
     object RealtimeNotReady : ConnectionCheck()
+
+    /** The table streams, but predates reply support. */
+    object SetupOutdated : ConnectionCheck()
     object Unreachable : ConnectionCheck()
     data class Unknown(val detail: String) : ConnectionCheck()
 
@@ -22,6 +25,9 @@ sealed class ConnectionCheck {
             RealtimeNotReady ->
                 "Connected, but the table is not set up for realtime, so nothing would be " +
                     "mirrored. Run the SQL above again — it is safe to re-run."
+            SetupOutdated ->
+                "Connected, but this project was set up before replies were supported. " +
+                    "Run the SQL above again — it is safe to re-run."
             Unreachable -> "Could not reach the project. Check the URL and your connection."
             is Unknown -> "Something went wrong: $detail"
         }

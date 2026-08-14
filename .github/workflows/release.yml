@@ -93,11 +93,24 @@ jobs:
       # launch needs the Gatekeeper steps in the README.
       - name: Build the app
         working-directory: macos
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          IS_TAG: ${{ github.ref_type == 'tag' }}
+          BUILD_NUMBER: ${{ github.run_number }}
         run: |
+          # Same rule as the Android job: the tag is the version, so the
+          # checked-in MARKETING_VERSION never has to be edited by hand.
+          if [ "$IS_TAG" = "true" ]; then
+            VERSION_NAME="${REF_NAME#v}"
+          else
+            VERSION_NAME="0.0.0-dev"
+          fi
           xcodebuild -project AndroidNotificationMirror.xcodeproj \
             -scheme AndroidNotificationMirror -configuration Release \
             -derivedDataPath build CODE_SIGN_IDENTITY="-" \
-            CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="" build
+            CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="" \
+            MARKETING_VERSION="$VERSION_NAME" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" build
 
       # A disk image with an Applications shortcut. Running an unsigned app from
       # Downloads triggers App Translocation, which relocates it to a read-only

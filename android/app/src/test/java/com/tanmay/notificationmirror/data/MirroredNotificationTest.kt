@@ -2,6 +2,7 @@ package com.tanmay.notificationmirror.data
 
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MirroredNotificationTest {
@@ -42,5 +43,37 @@ class MirroredNotificationTest {
                 """"body_text":null,"base64_icon":null}""",
             encoded
         )
+    }
+
+    @Test
+    fun `serializes the repliable flag under its column name`() {
+        val encoded = Json.encodeToString(
+            MirroredNotification(
+                notificationKey = "key",
+                appName = "Signal",
+                title = "Ada",
+                bodyText = "dinner?",
+                base64Icon = null,
+                isRepliable = true
+            )
+        )
+
+        assertTrue(encoded.contains(""""is_repliable":true"""))
+    }
+
+    @Test
+    fun `omits the repliable flag when the notification cannot be replied to`() {
+        val encoded = Json.encodeToString(
+            MirroredNotification(
+                notificationKey = "key",
+                appName = null,
+                title = "Hello",
+                bodyText = null,
+                base64Icon = null
+            )
+        )
+
+        // The column defaults to false, so the default does not need sending.
+        assertTrue(!encoded.contains("is_repliable"))
     }
 }

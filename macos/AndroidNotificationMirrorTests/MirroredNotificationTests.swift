@@ -45,6 +45,54 @@ import Testing
         #expect(notification.bodyText == nil)
     }
 
+    @Test func decodesAUuidPrimaryKey() throws {
+        // Projects created before the documented schema use gen_random_uuid().
+        let notification = try decode("""
+        {"id": "9efe35fb-8bff-4fb3-87bc-92c71ef4b74e", "notification_key": "k",
+         "app_name": "Signal", "title": "Ada", "body_text": null, "base64_icon": null}
+        """)
+
+        #expect(notification.id == "9efe35fb-8bff-4fb3-87bc-92c71ef4b74e")
+    }
+
+    @Test func decodesABigintPrimaryKey() throws {
+        // What the documented setup SQL creates: bigint generated always as identity.
+        let notification = try decode("""
+        {"id": 42, "notification_key": "k", "app_name": "Signal",
+         "title": "Ada", "body_text": null, "base64_icon": null}
+        """)
+
+        #expect(notification.id == "42")
+    }
+
+    @Test func survivesARowWithNoIdAtAll() throws {
+        let notification = try decode("""
+        {"notification_key": "k", "app_name": "Signal", "title": "Ada",
+         "body_text": null, "base64_icon": null}
+        """)
+
+        #expect(notification.id == nil)
+    }
+
+    @Test func decodesTheRepliableFlag() throws {
+        let notification = try decode("""
+        {"notification_key": "k", "app_name": "Signal", "title": "Ada",
+         "body_text": "dinner?", "base64_icon": null, "is_repliable": true}
+        """)
+
+        #expect(notification.isRepliable)
+    }
+
+    @Test func treatsAMissingRepliableFlagAsNotRepliable() throws {
+        // A phone still on the previous release omits the column entirely.
+        let notification = try decode("""
+        {"notification_key": "k", "app_name": "Signal", "title": "Ada",
+         "body_text": null, "base64_icon": null}
+        """)
+
+        #expect(!notification.isRepliable)
+    }
+
     @Test func decodesARowWithExtraColumns() throws {
         let notification = try decode("""
         {"id": 42, "notification_key": "k", "app_name": "Example",

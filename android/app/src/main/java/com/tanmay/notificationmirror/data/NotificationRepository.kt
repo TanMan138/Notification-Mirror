@@ -24,14 +24,27 @@ private const val STATUS_FUNCTION = "mirror_setup_status"
 @Serializable
 internal data class SetupStatus(
     @SerialName("in_publication") val inPublication: Boolean,
-    @SerialName("replica_identity_full") val replicaIdentityFull: Boolean
+    @SerialName("replica_identity_full") val replicaIdentityFull: Boolean,
+    // A project still running the two-column function decodes with false, which
+    // reports SetupOutdated — the fix is the same re-run either way.
+    @SerialName("reply_columns") val replyColumns: Boolean = false
 )
+
+/** Turns a status row into a verdict. Null means the function is missing. */
+internal fun setupCheck(status: SetupStatus?): ConnectionCheck = when {
+    status == null || !status.inPublication || !status.replicaIdentityFull -> ConnectionCheck.RealtimeNotReady
+    !status.replyColumns -> ConnectionCheck.SetupOutdated
+    else -> ConnectionCheck.Ok
+}
 
 interface NotificationRepository {
     suspend fun send(notification: MirroredNotification)
 
-    /** Emits the key of each notification the Mac has cleared. */
-    fun observeDismissals(): Flow<String>
+    /** Emits each thing the Mac asked this phone to do. */
+    fun observeMacActions(): Flow<MacAction>
+
+    /** Records whether a reply reached the app that posted the notification. */
+    suspend fun markReplyResult(rowId: String?, notificationKey: String, delivered: Boolean)
 
     /** Probes the project during setup. Never throws. */
     suspend fun checkConnection(): ConnectionCheck
@@ -48,7 +61,7 @@ class SupabaseNotificationRepository(
         client.postgrest.from(TABLE).insert(notification)
     }
 
-    override fun observeDismissals(): Flow<String> = flow {
+    override fun observeMacActions(): Flow<MacAction> = flow {
         // client.channel() caches by topic, and postgresChangeFlow must be called
         // before joining, so the channel has to be released when collection ends.
         // Android rebinds the listener service, and a stale joined channel would
@@ -59,10 +72,22 @@ class SupabaseNotificationRepository(
                 table = TABLE
             }
             channel.subscribe(blockUntilSubscribed = true)
-            emitAll(updates.mapNotNull { dismissedKeyOrNull(it.record) })
+            emitAll(updates.mapNotNull { macActionOrNull(it.record) })
         } finally {
             withContext(NonCancellable) {
                 client.realtime.removeChannel(channel)
+            }
+        }
+    }
+
+    override suspend fun markReplyResult(rowId: String?, notificationKey: String, delivered: Boolean) {
+        client.postgrest.from(TABLE).update({
+            set("reply_status", if (delivered) "sent" else "failed")
+        }) {
+            filter {
+                // Falling back to the key rewrites every reply in the
+                // conversation, so it only happens when there is no row id at all.
+                if (rowId != null) eq("id", rowId) else eq("notification_key", notificationKey)
             }
         }
     }
@@ -77,12 +102,7 @@ class SupabaseNotificationRepository(
     }
 
     private suspend fun checkRealtimeReady(): ConnectionCheck = try {
-        val status = client.postgrest.rpc(STATUS_FUNCTION).decodeList<SetupStatus>().firstOrNull()
-        if (status?.inPublication == true && status.replicaIdentityFull) {
-            ConnectionCheck.Ok
-        } else {
-            ConnectionCheck.RealtimeNotReady
-        }
+        setupCheck(client.postgrest.rpc(STATUS_FUNCTION).decodeList<SetupStatus>().firstOrNull())
     } catch (_: Exception) {
         // Missing function means the project was set up from older SQL.
         ConnectionCheck.RealtimeNotReady

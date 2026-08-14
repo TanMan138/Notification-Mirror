@@ -39,6 +39,12 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+
+        <!-- Receives the reply typed into the repliable test notification.
+             Not exported: only this app's own PendingIntent fires it. -->
+        <receiver
+            android:name=".notifications.TestReplyReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

@@ -9,6 +9,9 @@ enum ConnectionCheck: Equatable {
     /// The table exists but is not streamed, so nothing would ever be delivered.
     /// Also covers a setup that predates the status function.
     case realtimeNotReady
+
+    /// The table streams, but predates reply support.
+    case setupOutdated
     case unreachable
     case unknown(String)
 
@@ -23,6 +26,9 @@ enum ConnectionCheck: Equatable {
         case .realtimeNotReady:
             return "Connected, but the table is not set up for realtime, so nothing would be "
                 + "mirrored. Re-run the setup SQL from the phone — it is safe to re-run."
+        case .setupOutdated:
+            return "Connected, but this project was set up before replies were supported. "
+                + "Re-run the setup SQL from the phone — it is safe to re-run."
         case .unreachable:
             return "Could not reach the project. Check the URL and your connection."
         case .unknown(let detail):

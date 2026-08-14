@@ -1,6 +1,6 @@
 # Notification Mirror (Android)
 
-Android app that listens to device notifications and syncs them to a Supabase project via Realtime WebSockets. Works with the Mac menu bar app in this repository — see [macos](../macos/).
+Android app that listens to device notifications and syncs them to a Supabase project via Realtime WebSockets. Notifications from messaging apps can be replied to from the Mac, and clearing one on either device clears it on the other. Works with the Mac menu bar app in this repository — see [macos](../macos/).
 
 **In this repo:** Part of [Android–Mac Notification Mirror](../README.md). For architecture, start from the root README.
 
@@ -43,6 +43,13 @@ create table if not exists public.notifications (
 create index if not exists notifications_created_idx
   on public.notifications (created_at desc);
 
+-- Separate statements, not part of create table, so that a project created
+-- before replies existed picks them up on a re-run.
+alter table public.notifications add column if not exists is_repliable boolean not null default false;
+alter table public.notifications add column if not exists reply_text text;
+-- null | pending | sent | failed. The Mac writes pending; the phone writes the outcome.
+alter table public.notifications add column if not exists reply_status text;
+
 -- Required, or the UPDATE payload omits notification_key and phone-side
 -- dismissal silently stops working.
 alter table public.notifications replica identity full;
@@ -62,15 +69,23 @@ begin
 exception when duplicate_object then null;
 end $$;
 
+-- create policy has no "if not exists", and this script is meant to be re-run.
+drop policy if exists anon_select on public.notifications;
+drop policy if exists anon_insert on public.notifications;
+drop policy if exists anon_update on public.notifications;
+drop policy if exists anon_delete on public.notifications;
+
 create policy anon_select on public.notifications for select to anon using (true);
 create policy anon_insert on public.notifications for insert to anon with check (true);
 create policy anon_update on public.notifications for update to anon using (true);
 create policy anon_delete on public.notifications for delete to anon using (true);
 
--- Lets the apps confirm the two settings above actually took effect, since
--- neither is visible through the normal API.
+-- Lets the apps confirm the settings above actually took effect, since none of
+-- them is visible through the normal API.
+-- The return type gained a column, and create or replace cannot widen it.
+drop function if exists public.mirror_setup_status();
 create or replace function public.mirror_setup_status()
-returns table (in_publication boolean, replica_identity_full boolean)
+returns table (in_publication boolean, replica_identity_full boolean, reply_columns boolean)
 language sql
 security definer
 set search_path = ''
@@ -87,7 +102,14 @@ as $$
       from pg_catalog.pg_class c
       join pg_catalog.pg_namespace n on n.oid = c.relnamespace
       where n.nspname = 'public' and c.relname = 'notifications'
-    ), false);
+    ), false),
+    exists (
+      select 1 from pg_catalog.pg_attribute a
+      join pg_catalog.pg_class c on c.oid = a.attrelid
+      join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public' and c.relname = 'notifications'
+        and a.attname = 'reply_status' and not a.attisdropped
+    );
 $$;
 
 grant execute on function public.mirror_setup_status() to anon;
@@ -105,6 +127,10 @@ select cron.schedule(
 
 The whole script is safe to re-run.
 
+**Upgrading from v1.0.0?** Run the script again. Replying from the Mac needs three
+columns that projects set up before it do not have, and **Test connection** says so
+if they are missing. Everything else keeps working in the meantime.
+
 If `create extension pg_cron` errors, enable **pg_cron** under Database → Extensions in the dashboard, then re-run.
 
 ### 4. Connect the app
@@ -118,6 +144,15 @@ From **Project Settings → API**, copy the project URL and the **publishable** 
 - Enable **Notification Access** when prompted.
 - Optionally exempt the app from battery optimization for reliable mirroring.
 - Tap **Generate pairing code** and paste the code into the Mac app. It expires after five minutes and carries your credentials, so do not share it.
+
+## Checking it works
+
+The **Testing** card has two buttons:
+
+- **Send test notification** posts an ordinary notification. It should appear on the Mac with a *Clear on Phone* action and no reply field.
+- **Send repliable test notification** posts one shaped like a messaging app's, carrying a `RemoteInput` reply action. Reply to it from the Mac and the phone answers with a *Reply received* notification, which mirrors back — so the whole round trip is visible without anyone messaging you. Replying a second time to the same, now-cleared notification exercises the failure path: the Mac reports the reply as undelivered and returns your text.
+
+Group summaries — the collapsed entry a messaging app posts next to the real notification — are not mirrored, so one message produces one banner.
 
 ## Building from source
 
