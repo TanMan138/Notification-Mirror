@@ -17,8 +17,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var sharedConfigStore: ConfigStore { configStore }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let presenter = NotificationPresenter { [weak self] key in
-            Task { await self?.repository?.markDismissed(notificationKey: key) }
+        let presenter = NotificationPresenter { [weak self] rowID, key in
+            Task { await self?.repository?.markDismissed(rowID: rowID, notificationKey: key) }
         } onReplyRequested: { [weak self] rowID, key, text in
             Task {
                 await self?.repository?.sendReply(rowID: rowID, notificationKey: key, text: text)

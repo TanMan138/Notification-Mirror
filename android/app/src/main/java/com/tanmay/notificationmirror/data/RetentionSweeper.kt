@@ -23,6 +23,11 @@ class RetentionSweeper(private val secureStore: SecureStore) {
             repository.purgeOlderThan(RETENTION_HOURS)
             secureStore.put(LAST_SWEEP_KEY, nowEpochSeconds.toString())
         } catch (e: Exception) {
+            // Expected occasionally: the pg_cron job deletes the same expired
+            // rows hourly, and two concurrent deletes can deadlock. Both sides
+            // retry on their own schedule, so a lost sweep costs nothing. This
+            // sweeper stays because a project whose pg_cron extension failed to
+            // enable has no other cleanup at all.
             MirrorLog.e("Retention sweep failed", e)
         }
     }

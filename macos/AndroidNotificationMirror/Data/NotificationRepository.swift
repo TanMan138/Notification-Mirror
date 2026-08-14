@@ -185,13 +185,16 @@ final class NotificationRepository {
         return first.isEmpty ? "\(type(of: error))" : first
     }
 
-    func markDismissed(notificationKey: String) async {
+    /// Addresses the row by primary key when one is known, for the same reason
+    /// sendReply does: one notification_key covers a whole conversation.
+    func markDismissed(rowID: String?, notificationKey: String) async {
         do {
-            try await client
+            let update = try client
                 .from(notificationsTable)
                 .update(["is_dismissed": true])
-                .eq("notification_key", value: notificationKey)
-                .execute()
+            let filtered = rowID.map { update.eq("id", value: $0) }
+                ?? update.eq("notification_key", value: notificationKey)
+            try await filtered.execute()
             log.debug("Marked \(notificationKey, privacy: .public) dismissed.")
         } catch {
             log.error("Could not mark dismissed: \(error.localizedDescription)")

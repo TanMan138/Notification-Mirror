@@ -28,11 +28,11 @@ enum ReplyFailureNotice {
 final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
 
     private let center = UNUserNotificationCenter.current()
-    private let onDismissRequested: (String) -> Void
+    private let onDismissRequested: (String?, String) -> Void
     private let onReplyRequested: (String?, String, String) -> Void
 
     init(
-        onDismissRequested: @escaping (String) -> Void,
+        onDismissRequested: @escaping (String?, String) -> Void,
         onReplyRequested: @escaping (String?, String, String) -> Void
     ) {
         self.onDismissRequested = onDismissRequested
@@ -179,16 +179,18 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
             return
         }
 
+        let storedRowID = response.notification.request.content.userInfo["rowID"] as? String
+        let rowID = storedRowID?.isEmpty == false ? storedRowID : nil
+
         if let textResponse = response as? UNTextInputNotificationResponse,
            textResponse.actionIdentifier == replyActionIdentifier {
             let text = textResponse.userText.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else { return }
-            let rowID = response.notification.request.content.userInfo["rowID"] as? String
-            onReplyRequested(rowID?.isEmpty == false ? rowID : nil, key, text)
+            onReplyRequested(rowID, key, text)
             return
         }
 
         guard response.actionIdentifier == dismissActionIdentifier else { return }
-        onDismissRequested(key)
+        onDismissRequested(rowID, key)
     }
 }
