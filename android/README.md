@@ -145,6 +145,15 @@ From **Project Settings → API**, copy the project URL and the **publishable** 
 - Optionally exempt the app from battery optimization for reliable mirroring.
 - Tap **Generate pairing code** and paste the code into the Mac app. It expires after five minutes and carries your credentials, so do not share it.
 
+## Checking it works
+
+The **Testing** card has two buttons:
+
+- **Send test notification** posts an ordinary notification. It should appear on the Mac with a *Clear on Phone* action and no reply field.
+- **Send repliable test notification** posts one shaped like a messaging app's, carrying a `RemoteInput` reply action. Reply to it from the Mac and the phone answers with a *Reply received* notification, which mirrors back — so the whole round trip is visible without anyone messaging you. Replying a second time to the same, now-cleared notification exercises the failure path: the Mac reports the reply as undelivered and returns your text.
+
+Group summaries — the collapsed entry a messaging app posts next to the real notification — are not mirrored, so one message produces one banner.
+
 ## Building from source
 
 Open the **android** folder in Android Studio (not the repository root) and sync Gradle.

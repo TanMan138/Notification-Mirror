@@ -1,6 +1,6 @@
 # Android–Mac Notification Mirror
 
-A native bridge that beams Android notifications to macOS and allows two-way dismissal using real-time cloud synchronisation via Supabase.
+A native bridge that beams Android notifications to macOS, lets you reply to messages from the Mac, and allows two-way dismissal — all over real-time cloud synchronisation via Supabase.
 
 ### Demo
 
@@ -11,6 +11,8 @@ A native bridge that beams Android notifications to macOS and allows two-way dis
 ## Features
 
 - **Two-way background sync** — Dismiss a notification on your Mac and it pushes a state update to Supabase, which instantly clears it on your Android device over WebSockets.
+- **Reply from the Mac** — Messaging notifications arrive with a reply field. Type into the banner and the text is delivered by the app that posted it, using the notification's own `RemoteInput` action. If the notification is gone by then, the Mac says so and hands your text back rather than losing it.
+- **No duplicate banners** — Group summaries, the collapsed stand-in messaging apps post alongside the real notification, are filtered out on the phone.
 - **On-the-fly Base64 image encoding** — App icons are sent from the phone and shown in macOS notifications and in the menu bar app list.
 - **Dynamic app filtering** — Enable or disable notifications per app from the macOS menu bar; state is stored in UserDefaults and survives restarts.
 - **Cloud-Powered WebSockets** — Powered by Supabase Realtime (PostgreSQL). It works anywhere in the world, unconstrained by local Wi-Fi limitations.
@@ -32,6 +34,10 @@ A native bridge that beams Android notifications to macOS and allows two-way dis
 2. **Mac**: The menu bar app subscribes to `postgresChange` events on the `notifications` table. It receives the `INSERT` payload, checks the per-app filter, and displays a native macOS notification with a “Clear on Phone” action.
 3. **Mac**: User taps “Clear on Phone” → Mac updates the row in the `notifications` table, setting `is_dismissed = true`.
 4. **Android**: A background listener subscribed to `UPDATE` events sees `is_dismissed = true` → extracts the `notification_key` and uses native Android APIs to cancel the notification on the phone.
+5. **Mac**: For a notification the phone flagged repliable, the banner carries a reply field. Sending writes `reply_text` and `reply_status = 'pending'` to that row.
+6. **Android**: The same listener sees the pending reply, fills the notification's `RemoteInput` and fires the posting app's own `PendingIntent`, then writes `reply_status` back as `sent` or `failed`. The `PendingIntent` never leaves the phone — it cannot be serialised — so it lives in an in-memory registry keyed on the notification, rebuilt from `getActiveNotifications()` whenever the listener reconnects.
+
+Both directions address the row by primary key, not `notification_key`: apps reuse one key for every message in a conversation, so filtering on it would act on the whole history at once.
 
 ---
 
