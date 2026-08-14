@@ -11,6 +11,23 @@ git push origin v1.0.0
 `workflow_dispatch` runs the same build without signing or publishing, which is
 the way to check CI before cutting a tag.
 
+## Schema changes need a line in the release notes
+
+The apps talk through a table the user owns, so a release that needs new columns
+cannot migrate anyone itself. When the setup SQL in
+`android/app/src/main/res/values/strings.xml` has changed since the previous
+tag, the draft release notes must say so, in the first paragraph:
+
+> **Upgrading?** Re-run the setup SQL from the README in your Supabase SQL
+> editor. It is safe to re-run.
+
+Check with `git diff <previous-tag>..HEAD -- android/app/src/main/res/values/strings.xml`.
+
+`v1.1.0` is the first release where this applies: replying needs `is_repliable`,
+`reply_text`, and `reply_status`, and a project without them mirrors normally
+while silently dropping every reply. The phone shows a warning card when it
+detects this, but a user who never reopens the app will not see it.
+
 ## One-time setup
 
 The Android signing key lives outside the repository. `android/release.jks` and
@@ -30,7 +47,9 @@ Add four repository secrets under Settings → Secrets and variables → Actions
 ## Versioning
 
 `versionName` comes from the tag with the leading `v` removed; `versionCode` is
-the workflow run number, so it only ever increases. Nothing needs editing by
+the workflow run number, so it only ever increases. The Mac app takes the same
+two values as `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION`, passed to
+`xcodebuild` rather than read from the project file. Nothing needs editing by
 hand before a release.
 
 ## What the build guards against
