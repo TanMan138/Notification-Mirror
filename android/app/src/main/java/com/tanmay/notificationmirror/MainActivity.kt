@@ -60,11 +60,12 @@ import com.tanmay.notificationmirror.data.SupabaseProvider
 import com.tanmay.notificationmirror.data.encodePairingPayload
 import com.tanmay.notificationmirror.data.parseSupabaseConfig
 import com.tanmay.notificationmirror.ui.PairingCard
+import com.tanmay.notificationmirror.notifications.TEST_NOTIFICATION_CHANNEL_ID
+import com.tanmay.notificationmirror.notifications.postRepliableTestNotification
 import com.tanmay.notificationmirror.ui.SetupScreen
 import com.tanmay.notificationmirror.ui.theme.NotificationMirrorTheme
 import kotlinx.coroutines.launch
 
-private const val TEST_NOTIFICATION_CHANNEL_ID = "notification_mirror_test"
 private const val TEST_NOTIFICATION_ID = 1
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -124,6 +125,7 @@ class MainActivity : ComponentActivity() {
                             isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
                             onFixPermissions = { handleFixPermissions() },
                             onSendTestNotification = { trySendTestNotification() },
+                            onSendRepliableTestNotification = { trySendRepliableTestNotification() },
                             pairing = {
                                 PairingCard(
                                     pairingString = pairingString,
@@ -201,6 +203,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /** Stands in for a messaging app, so the Mac round trip needs no second person. */
+    private fun trySendRepliableTestNotification() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            !NotificationManagerCompat.from(this).areNotificationsEnabled()
+        ) {
+            requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            ensureTestNotificationChannel(this)
+            postRepliableTestNotification(this)
+        }
+    }
+
 }
 
 private fun configErrorMessage(error: Throwable): String = when (error) {
@@ -237,6 +251,7 @@ private fun NotificationMirrorScreen(
     isIgnoringBatteryOptimizations: Boolean,
     onFixPermissions: () -> Unit,
     onSendTestNotification: () -> Unit,
+    onSendRepliableTestNotification: () -> Unit,
     pairing: @Composable () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -318,6 +333,13 @@ private fun NotificationMirrorScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Send test notification")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = onSendRepliableTestNotification,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Send repliable test notification")
                 }
             }
         }
