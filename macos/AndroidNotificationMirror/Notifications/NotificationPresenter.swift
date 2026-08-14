@@ -29,11 +29,11 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
 
     private let center = UNUserNotificationCenter.current()
     private let onDismissRequested: (String) -> Void
-    private let onReplyRequested: (String, String) -> Void
+    private let onReplyRequested: (String?, String, String) -> Void
 
     init(
         onDismissRequested: @escaping (String) -> Void,
-        onReplyRequested: @escaping (String, String) -> Void
+        onReplyRequested: @escaping (String?, String, String) -> Void
     ) {
         self.onDismissRequested = onDismissRequested
         self.onReplyRequested = onReplyRequested
@@ -95,7 +95,12 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
         content.categoryIdentifier = notification.isRepliable
             ? repliableCategoryIdentifier
             : mirrorCategoryIdentifier
-        content.userInfo = ["notificationKey": notification.notificationKey]
+        content.userInfo = [
+            "notificationKey": notification.notificationKey,
+            // Replies address the row, not the key: one key covers a whole
+            // conversation, so filtering on it replies to every past message.
+            "rowID": notification.id ?? ""
+        ]
 
         if let appName = notification.appName {
             content.subtitle = appName
@@ -178,7 +183,8 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
            textResponse.actionIdentifier == replyActionIdentifier {
             let text = textResponse.userText.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else { return }
-            onReplyRequested(key, text)
+            let rowID = response.notification.request.content.userInfo["rowID"] as? String
+            onReplyRequested(rowID?.isEmpty == false ? rowID : nil, key, text)
             return
         }
 

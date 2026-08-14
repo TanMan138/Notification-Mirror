@@ -74,6 +74,7 @@ class NotificationMirrorService : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         val notification = sbn?.notification ?: return
         val extras = notification.extras ?: return
+        if (isGroupSummary(notification.flags)) return // Duplicate of a real one, and never repliable.
         val repository = repositoryFlow.value ?: return // Unconfigured: drop it.
 
         val replyTarget = notification.replyTarget()
@@ -124,7 +125,7 @@ class NotificationMirrorService : NotificationListenerService() {
         }
 
         try {
-            repository.markReplyResult(action.key, delivered)
+            repository.markReplyResult(action.rowId, action.key, delivered)
         } catch (e: Exception) {
             MirrorLog.e("Could not record the reply outcome", e)
         }

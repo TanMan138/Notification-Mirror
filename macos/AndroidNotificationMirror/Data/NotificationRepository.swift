@@ -198,15 +198,21 @@ final class NotificationRepository {
         }
     }
 
-    /// Hands a reply to the phone. The phone writes reply_status back as sent
-    /// or failed, which arrives as a replyResult event.
-    func sendReply(notificationKey: String, text: String) async {
+    /// Hands a reply to the phone, which writes reply_status back as sent or
+    /// failed — that arrives as a replyResult event.
+    ///
+    /// Addresses the row by primary key when one is known. Filtering on
+    /// notification_key instead would match every message in the conversation —
+    /// apps reuse one key for all of them — and the phone would then deliver the
+    /// reply once per matched row.
+    func sendReply(rowID: String?, notificationKey: String, text: String) async {
         do {
-            try await client
+            let update = try client
                 .from(notificationsTable)
                 .update(["reply_text": text, "reply_status": "pending"])
-                .eq("notification_key", value: notificationKey)
-                .execute()
+            let filtered = rowID.map { update.eq("id", value: $0) }
+                ?? update.eq("notification_key", value: notificationKey)
+            try await filtered.execute()
             log.debug("Sent a reply for \(notificationKey, privacy: .public).")
         } catch {
             log.error("Could not send the reply: \(error.localizedDescription)")

@@ -60,13 +60,42 @@ class MacActionMapperTest {
     @Test
     fun `reports a reply when the Mac marks the row pending`() {
         val record = buildJsonObject {
+            put("id", "e719a6c7-e5c9-4e90-ba2c-92ef86bfbe2e")
             put("notification_key", "key")
             put("is_dismissed", false)
             put("reply_text", "on my way")
             put("reply_status", "pending")
         }
 
-        assertEquals(MacAction.Reply("key", "on my way"), macActionOrNull(record))
+        assertEquals(
+            MacAction.Reply("e719a6c7-e5c9-4e90-ba2c-92ef86bfbe2e", "key", "on my way"),
+            macActionOrNull(record)
+        )
+    }
+
+    @Test
+    fun `carries a numeric row id as text`() {
+        // The documented schema uses bigint; older projects use uuid. The
+        // outcome is written back with a filter on this value either way.
+        val record = buildJsonObject {
+            put("id", 42)
+            put("notification_key", "key")
+            put("reply_text", "on my way")
+            put("reply_status", "pending")
+        }
+
+        assertEquals(MacAction.Reply("42", "key", "on my way"), macActionOrNull(record))
+    }
+
+    @Test
+    fun `still replies when the row carries no id`() {
+        val record = buildJsonObject {
+            put("notification_key", "key")
+            put("reply_text", "on my way")
+            put("reply_status", "pending")
+        }
+
+        assertEquals(MacAction.Reply(null, "key", "on my way"), macActionOrNull(record))
     }
 
     @Test

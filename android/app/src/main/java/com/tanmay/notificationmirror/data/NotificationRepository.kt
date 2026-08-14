@@ -44,7 +44,7 @@ interface NotificationRepository {
     fun observeMacActions(): Flow<MacAction>
 
     /** Records whether a reply reached the app that posted the notification. */
-    suspend fun markReplyResult(notificationKey: String, delivered: Boolean)
+    suspend fun markReplyResult(rowId: String?, notificationKey: String, delivered: Boolean)
 
     /** Probes the project during setup. Never throws. */
     suspend fun checkConnection(): ConnectionCheck
@@ -80,11 +80,15 @@ class SupabaseNotificationRepository(
         }
     }
 
-    override suspend fun markReplyResult(notificationKey: String, delivered: Boolean) {
+    override suspend fun markReplyResult(rowId: String?, notificationKey: String, delivered: Boolean) {
         client.postgrest.from(TABLE).update({
             set("reply_status", if (delivered) "sent" else "failed")
         }) {
-            filter { eq("notification_key", notificationKey) }
+            filter {
+                // Falling back to the key rewrites every reply in the
+                // conversation, so it only happens when there is no row id at all.
+                if (rowId != null) eq("id", rowId) else eq("notification_key", notificationKey)
+            }
         }
     }
 

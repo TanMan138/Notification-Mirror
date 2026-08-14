@@ -19,8 +19,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         let presenter = NotificationPresenter { [weak self] key in
             Task { await self?.repository?.markDismissed(notificationKey: key) }
-        } onReplyRequested: { [weak self] key, text in
-            Task { await self?.repository?.sendReply(notificationKey: key, text: text) }
+        } onReplyRequested: { [weak self] rowID, key, text in
+            Task {
+                await self?.repository?.sendReply(rowID: rowID, notificationKey: key, text: text)
+            }
         }
         self.presenter = presenter
         SetupWindowController.shared.configStore = configStore
