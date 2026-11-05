@@ -72,6 +72,7 @@ jobs:
         with:
           name: android-apk
           path: android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 3
 
   macos:
     runs-on: macos-15
@@ -128,6 +129,7 @@ jobs:
         with:
           name: macos-app
           path: macos/AndroidNotificationMirror.dmg
+          retention-days: 3
 
   publish:
     needs: [android, macos]
